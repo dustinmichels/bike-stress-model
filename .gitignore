@@ -8,6 +8,9 @@ notebooks/cache/
 # QGIS project files
 *.qgz
 
+# mac
+.DS_Store
+
 # Python-generated files
 __pycache__/
 *.py[oc]
