@@ -9,34 +9,6 @@ FEET_TO_M = 0.3048
 SpeedInput = Union[str, float, List[str]]
 
 
-def extract_maxspeed(value: SpeedInput) -> float:
-    """
-    Extracts the maximum speed from a value.
-
-    Args:
-        value: A string like "25 mph", a float (np.nan), a list of strings.
-
-    Returns:
-        float or np.nan
-    """
-
-    def parse_speed(v: Union[str, float]) -> float:
-        if isinstance(v, float):
-            return v if not np.isnan(v) else np.nan
-        if isinstance(v, str):
-            try:
-                return float(v.replace("mph", "").strip())
-            except ValueError:
-                return np.nan
-        return np.nan
-
-    if isinstance(value, list):
-        speeds = [s for s in (parse_speed(v) for v in value) if not np.isnan(s)]
-        return max(speeds) if speeds else np.nan
-
-    return parse_speed(value)
-
-
 def extract_width(value) -> float:
     """
     Width could be in meters (default) or feet (using notation like 9' or 9'6").

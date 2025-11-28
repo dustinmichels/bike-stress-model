@@ -1,8 +1,8 @@
 import osmnx as ox
 import pandas as pd
 
-from src.cycleway import combine_and_score_cycleway_types
-from util import extract_maxspeed, extract_width, first_if_list
+import src.stressmodel as stressmodel
+from util import extract_width, first_if_list
 
 OUTFILE = "data/somerville_network.gpkg"
 
@@ -49,8 +49,7 @@ def process_network(edges: pd.DataFrame) -> pd.DataFrame:
     for col in rows_to_flatten:
         edges[col] = first_if_list(edges[col])
 
-    # parse maxspeed and width
-    edges["maxspeed_int"] = edges["maxspeed"].apply(extract_maxspeed).astype("Int64")
+    # parse width
     edges["width_float"] = edges["width"].apply(extract_width).astype("Float64")
 
     # if width is missing, set to 10 meters
@@ -73,8 +72,15 @@ def main():
     print("Process network")
     edges = process_network(edges)
 
-    print("Combine cycleway types")
-    edges = combine_and_score_cycleway_types(edges)
+    # MODEL - SPEED: parse maxspeed
+    print("Prepare speed data")
+    edges["maxspeed_int"], edges["maxspeed_int_score"] = stressmodel.speed.run(edges)
+
+    # MODEL - SEPARATION LEVEL: combine cycleway types
+    print("Prepare separation level data")
+    edges["separation_level"], edges["separation_level_score"] = (
+        stressmodel.separation_level.run(edges)
+    )
 
     # save to csv
     print("Saving to CSV")

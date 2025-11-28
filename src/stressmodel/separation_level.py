@@ -1,17 +1,13 @@
 """
 What type of cycleway is it?
-
-We combine all cycleway-related tags into a single "cycleway_type" column,
-combine all the cycleway tags into a list, pick the "best" cycleway type,
-and assign a score based on the type of cycleway.
 """
 
 import numpy as np
 import pandas as pd
 
-CYCLEWAY_RANKING = {
-    "no": 0,
-    "shared_lane": 3,  # in traffic
+RANKING = {
+    "none": 0,
+    "shared_lane": 2,  # in traffic
     "share_busway": 5,  # shared with bus
     "lane": 7,  # dedicated bike lane, not separate
     "lane_buffered": 7.5,  # Added buffered lane type
@@ -33,11 +29,11 @@ def combine_cycleways(row):
         if isinstance(v, np.ndarray):
             v = v.tolist()
 
-        # Skip missing
+        # if missing, mark as "none"
         if v is None or v == "no":
-            continue
+            v = "none"
         if isinstance(v, float) and pd.isna(v):
-            continue
+            v = "none"
 
         # Handle lists
         if isinstance(v, list):
@@ -49,7 +45,7 @@ def combine_cycleways(row):
 
 
 def pick_best(values):
-    return max(values, key=lambda v: CYCLEWAY_RANKING.get(v, 0), default=None)
+    return max(values, key=lambda v: RANKING.get(v, 0), default=None)
 
 
 def apply_buffer_to_list(values, row):
@@ -85,8 +81,35 @@ def adjust_track_with_separation(row):
     return cycleway_all
 
 
-def combine_and_score_cycleway_types(df):
-    # combine all cycleway vals
+def run(df):
+    """
+    Determine the separation level of cycling infrastructure for each row in the DataFrame.
+
+    Args:
+        df : pd.DataFrame
+            DataFrame containing OSM edge data with cycleway-related columns.
+    Returns:
+        Tuple[pd.Series, pd.Series]
+
+    About:
+    ------
+    "separation_level" : pd.Series
+        "none"            : no cycling infrastructure
+        "shared_lane"     : shared lane in traffic
+        "share_busway"    : shared with bus
+        "lane"            : dedicated bike lane, not separate
+        "lane_buffered"   : dedicated bike lane with buffer
+        "track"           : totally separated (but sometimes used for lane with buffer)
+        "separate"        : totally separated
+
+    "separation_score" : pd.Series
+        Numerical score for separation level, higher is better
+
+    """
+    # make a copy
+    df = df.copy()
+
+    # combine all vals from cycleway tags into a single list
     df["cycleway_all"] = df.apply(combine_cycleways, axis=1)
 
     # rename: if buffer exists, rename 'lane' to 'lane_buffered'
@@ -97,19 +120,19 @@ def combine_and_score_cycleway_types(df):
     # rename: if cycleway="track" but cycleway:separation="flex_post," rename to "lane_buffered"
     df["cycleway_all"] = df.apply(adjust_track_with_separation, axis=1)
 
-    # pick best
-    df["cycleway_type"] = df["cycleway_all"].apply(pick_best)
+    # pick best of list
+    df["separation_level"] = df["cycleway_all"].apply(pick_best)
 
+    # overwrite other vals:
     # check if highway=cycleway OR highway=path + bicycle=designated
     # if so, set cycleway_type to 'separate'
     is_cycleway = (df["highway"] == "cycleway") | (
         (df["highway"] == "path") & (df["bicycle"] == "designated")
     )
-    df.loc[is_cycleway, "cycleway_type"] = "separate"
+    df.loc[is_cycleway, "separation_level"] = "separate"
 
     # apply score column
-    df["cycleway_score"] = df["cycleway_type"].apply(
-        lambda v: CYCLEWAY_RANKING.get(v, 0)
-    )
+    df["separation_score"] = df["separation_level"].apply(lambda v: RANKING.get(v, 0))
 
-    return df
+    # return separation level and score pd.Series
+    return df["separation_level"], df["separation_score"]
