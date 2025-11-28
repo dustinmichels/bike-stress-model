@@ -15,7 +15,15 @@ Determining what type of cycleway infrastructure exists on each street segment, 
 - "cycleway", "cycleway:both", "cycleway:left", "cycleway:right" are all accumulated into a single list.
 - If there is "lane" and "cycleway:buffer" or "cycleway:separation", we upgrade the type to "lane_buffered".
 
-### Tests
+### Speed limit
+
+### Traffic level
+
+### Road surface
+
+### Traffic safety
+
+## Tests
 
 ```sh
 uv run pytest tests/ -v
