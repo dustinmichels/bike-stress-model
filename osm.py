@@ -4,7 +4,7 @@ import pandas as pd
 import src.stressmodel as stressmodel
 from util import extract_width, first_if_list
 
-OUTFILE = "data/somerville_network.gpkg"
+OUT_PATH = "data/out/somerville_network"
 
 # add cycleway to useful tags
 ox.settings.useful_tags_way = ox.settings.useful_tags_way + [
@@ -31,7 +31,7 @@ def get_network(place: str, network_type: str = "bike"):
     G = ox.graph_from_place(place, network_type=network_type)
 
     # project graph to EPSG:26986 (Massachusetts Mainland)
-    G = ox.project_graph(G, to_crs="EPSG:26986")
+    # G = ox.project_graph(G, to_crs="EPSG:26986")
 
     nodes, edges = ox.graph_to_gdfs(G)
     return nodes, edges
@@ -84,11 +84,15 @@ def main():
 
     # save to csv
     print("Saving to CSV")
-    edges.to_csv("data/somerville_network.csv", index=False)
+    edges.to_csv(f"{OUT_PATH}_edges.csv", index=False)
 
     print("Saving to GeoPackage")
-    edges.to_file(OUTFILE, layer="somerville_streets", driver="GPKG")
-    nodes.to_file(OUTFILE, layer="somerville_nodes", driver="GPKG")
+    edges.to_file(f"{OUT_PATH}.gpkg", layer="somerville_streets", driver="GPKG")
+    nodes.to_file(f"{OUT_PATH}.gpkg", layer="somerville_nodes", driver="GPKG")
+
+    # also save geojson
+    print("Saving to GeoJSON")
+    edges.to_file(f"{OUT_PATH}.geojson", driver="GeoJSON")
 
 
 if __name__ == "__main__":

@@ -23,6 +23,10 @@ Determining what type of cycleway infrastructure exists on each street segment, 
 
 ### Traffic safety
 
+Road safety.
+
+- [Police data](https://data.somervillema.gov/Public-Safety/Police-Data-Crashes/mtik-28va/about_data)
+
 ## Next Steps
 
 School safety analysis:
