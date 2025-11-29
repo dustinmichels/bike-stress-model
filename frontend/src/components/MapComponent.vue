@@ -1,7 +1,5 @@
 <template>
   <div class="box map-component">
-    <h2 class="title is-4">Somerville Streets</h2>
-
     <div class="notification is-danger is-light" v-if="error">
       {{ error }}
     </div>
@@ -44,15 +42,20 @@ let geojsonLayer: L.GeoJSON | null = null
 // Initialize map and load GeoJSON
 onMounted(async () => {
   if (mapContainer.value) {
-    // Initialize map centered on Somerville, MA
-    map = L.map(mapContainer.value).setView([42.3876, -71.0995], 13)
+    // Initialize map centered on Somerville, MA with more zoom
+    map = L.map(mapContainer.value).setView([42.3876, -71.0995], 15)
 
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(map)
+    const CartoDB_Positron = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 30,
+      },
+    )
+
+    CartoDB_Positron.addTo(map)
 
     // Load the GeoJSON file
     await loadGeoJson()
@@ -109,7 +112,7 @@ const addGeoJsonToMap = (geojsonData: any) => {
         }
       },
       style: (feature) => {
-        // Style for streets
+        // Style for streets with thicker lines
         return {
           color: '#3273dc',
           weight: 2,
@@ -121,7 +124,7 @@ const addGeoJsonToMap = (geojsonData: any) => {
     // Fit map to GeoJSON bounds
     const bounds = geojsonLayer.getBounds()
     if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [50, 50] })
+      map.fitBounds(bounds, { padding: [1, 1] })
     }
   } catch (e) {
     error.value = `Error adding GeoJSON to map: ${e instanceof Error ? e.message : 'Unknown error'}`

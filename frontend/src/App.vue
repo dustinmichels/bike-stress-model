@@ -32,7 +32,7 @@ import ModelComponent from './components/ModelComponent.vue'
 }
 
 .top-row {
-  flex: 2;
+  flex: 3;
   margin: 0 !important;
 }
 
