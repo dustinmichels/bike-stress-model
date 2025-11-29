@@ -17,13 +17,71 @@
         <span>10 (Best)</span>
       </div>
     </div>
+
+    <!-- Score Controls (optional - you can show/hide this) -->
+    <div class="score-controls" v-if="showControls">
+      <div class="score-control-title">Adjust Weights</div>
+      <div class="weight-slider">
+        <label>Max Speed Score: {{ weights.maxspeed_int_score.toFixed(1) }}</label>
+        <input
+          type="range"
+          min="0"
+          max="2"
+          step="0.1"
+          v-model.number="weights.maxspeed_int_score"
+          @input="onWeightsChange"
+        />
+      </div>
+      <div class="weight-slider">
+        <label>Separation Level Score: {{ weights.separation_level_score.toFixed(1) }}</label>
+        <input
+          type="range"
+          min="0"
+          max="2"
+          step="0.1"
+          v-model.number="weights.separation_level_score"
+          @input="onWeightsChange"
+        />
+      </div>
+      <div class="weight-slider">
+        <label
+          >Street Classification Score: {{ weights.street_classification_score.toFixed(1) }}</label
+        >
+        <input
+          type="range"
+          min="0"
+          max="2"
+          step="0.1"
+          v-model.number="weights.street_classification_score"
+          @input="onWeightsChange"
+        />
+      </div>
+      <div class="weight-slider">
+        <label>Lanes Score: {{ weights.lanes_int_score.toFixed(1) }}</label>
+        <input
+          type="range"
+          min="0"
+          max="2"
+          step="0.1"
+          v-model.number="weights.lanes_int_score"
+          @input="onWeightsChange"
+        />
+      </div>
+      <button class="button is-small" @click="resetWeights">Reset Weights</button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import {
+  type GeoJsonData,
+  type ScoreWeights,
+  defaultWeights,
+  recalculateAllScores,
+} from '@/utils/scoreManager'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 
 // Fix for default marker icons in Leaflet with bundlers
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png'
@@ -41,11 +99,28 @@ const DefaultIcon = L.icon({
 })
 L.Marker.prototype.options.icon = DefaultIcon
 
+// Props
+interface Props {
+  showControls?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  showControls: false,
+})
+
 // Refs
 const mapContainer = ref<HTMLElement | null>(null)
 const error = ref('')
 const loading = ref(true)
 
+// GeoJSON data storage
+const originalGeoJson = ref<GeoJsonData | null>(null) // Preserve original from server
+const currentGeoJson = ref<GeoJsonData | null>(null) // Working copy with recalculated scores
+
+// Score weights (reactive)
+const weights = reactive<ScoreWeights>({ ...defaultWeights })
+
+// Leaflet instances
 let map: L.Map | null = null
 let geojsonLayer: L.GeoJSON | null = null
 
@@ -118,7 +193,15 @@ const loadGeoJson = async () => {
     }
 
     const data = await response.json()
-    addGeoJsonToMap(data)
+
+    // Store original data
+    originalGeoJson.value = data
+
+    // Calculate initial composite scores and store in working copy
+    currentGeoJson.value = recalculateAllScores(data, weights)
+
+    // Add to map
+    addGeoJsonToMap(currentGeoJson.value)
   } catch (e) {
     error.value = `Error loading GeoJSON: ${e instanceof Error ? e.message : 'Unknown error'}`
   } finally {
@@ -127,7 +210,7 @@ const loadGeoJson = async () => {
 }
 
 // Add GeoJSON to map
-const addGeoJsonToMap = (geojsonData: any) => {
+const addGeoJsonToMap = (geojsonData: GeoJsonData) => {
   if (!map) return
 
   try {
@@ -142,7 +225,11 @@ const addGeoJsonToMap = (geojsonData: any) => {
         // Add popup with properties
         if (feature.properties) {
           const popupContent = Object.entries(feature.properties)
-            .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+            .map(([key, value]) => {
+              // Format numbers to 2 decimal places
+              const formattedValue = typeof value === 'number' ? value.toFixed(2) : value
+              return `<strong>${key}:</strong> ${formattedValue}`
+            })
             .join('<br>')
           layer.bindPopup(popupContent)
         }
@@ -159,15 +246,47 @@ const addGeoJsonToMap = (geojsonData: any) => {
       },
     }).addTo(map)
 
-    // Fit map to GeoJSON bounds
-    const bounds = geojsonLayer.getBounds()
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [1, 1] })
+    // Fit map to GeoJSON bounds (only on initial load)
+    if (!geojsonLayer) {
+      const bounds = geojsonLayer.getBounds()
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [1, 1] })
+      }
     }
   } catch (e) {
     error.value = `Error adding GeoJSON to map: ${e instanceof Error ? e.message : 'Unknown error'}`
   }
 }
+
+// Handle weight changes
+const onWeightsChange = () => {
+  if (!originalGeoJson.value) return
+
+  // Recalculate scores with new weights
+  currentGeoJson.value = recalculateAllScores(originalGeoJson.value, weights)
+
+  // Update map
+  addGeoJsonToMap(currentGeoJson.value)
+}
+
+// Reset weights to default
+const resetWeights = () => {
+  weights.maxspeed_int_score = defaultWeights.maxspeed_int_score
+  weights.separation_level_score = defaultWeights.separation_level_score
+  weights.street_classification_score = defaultWeights.street_classification_score
+  weights.lanes_int_score = defaultWeights.lanes_int_score
+  onWeightsChange()
+}
+
+// Expose methods for parent components
+defineExpose({
+  recalculateScores: onWeightsChange,
+  resetScores: resetWeights,
+  setWeights: (newWeights: Partial<ScoreWeights>) => {
+    Object.assign(weights, newWeights)
+    onWeightsChange()
+  },
+})
 </script>
 
 <style scoped>
@@ -225,5 +344,43 @@ const addGeoJsonToMap = (geojsonData: any) => {
   justify-content: space-between;
   font-size: 12px;
   color: #666;
+}
+
+.score-controls {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  min-width: 250px;
+}
+
+.score-control-title {
+  font-weight: bold;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.weight-slider {
+  margin-bottom: 12px;
+}
+
+.weight-slider label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.weight-slider input[type='range'] {
+  width: 100%;
+}
+
+.button {
+  width: 100%;
+  margin-top: 8px;
 }
 </style>
