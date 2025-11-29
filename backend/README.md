@@ -10,9 +10,15 @@ uv run --with jupyter ./clear_notebooks.sh
 
 Deploy with render??? and fast API
 
-## Map Types
+## Model inputs
 
-### Cycleway Types
+- separation_level
+- speed_limit
+- "busyness"
+  - street_classification
+  - lane_count
+
+### separation level
 
 Determining what type of cycleway infrastructure exists on each street segment, requires combining multiple OpenStreetMap tags.
 
