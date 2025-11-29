@@ -2,7 +2,7 @@
   <div class="container is-fluid main-container">
     <div class="columns top-row">
       <div class="column is-two-thirds">
-        <MapComponent />
+        <MapComponent ref="mapRef" />
       </div>
       <div class="column is-one-third">
         <AboutComponent />
@@ -10,16 +10,33 @@
     </div>
     <div class="columns bottom-row">
       <div class="column">
-        <ModelComponent />
+        <ModelComponent @weights-changed="handleWeightsChanged" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { percentagesToWeights } from '@/utils/scoreManager'
+import { ref } from 'vue'
 import AboutComponent from './components/AboutComponent.vue'
 import MapComponent from './components/MapComponent.vue'
 import ModelComponent from './components/ModelComponent.vue'
+
+const mapRef = ref()
+
+const handleWeightsChanged = (percentages: {
+  separation_level: number
+  speed: number
+  busyness: number
+}) => {
+  // Convert percentages to normalized weights
+  const weights = percentagesToWeights(percentages)
+
+  // Update the map with new weights
+  // This triggers recalculation of composite scores and map re-render
+  mapRef.value?.setWeights(weights)
+}
 </script>
 
 <style scoped>

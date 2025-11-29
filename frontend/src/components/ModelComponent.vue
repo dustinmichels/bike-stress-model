@@ -39,6 +39,11 @@ interface Segment {
   color: string
 }
 
+// Emit event when weights change
+const emit = defineEmits<{
+  weightsChanged: [weights: { separation_level: number; speed: number; busyness: number }]
+}>()
+
 const segments = ref<Segment[]>([
   { name: 'Separation level', value: 50, color: '#3273dc' },
   { name: 'Speed', value: 25, color: '#48c774' },
@@ -54,6 +59,14 @@ const snapToIncrement = (value: number, increment: number = 5): number => {
 
 const getCumulativeWidth = (index: number): number => {
   return segments.value.slice(0, index + 1).reduce((sum, seg) => sum + seg.value, 0)
+}
+
+const emitWeightChanges = () => {
+  emit('weightsChanged', {
+    separation_level: segments.value[0].value,
+    speed: segments.value[1].value,
+    busyness: segments.value[2].value,
+  })
 }
 
 const startDrag = (index: number, event: MouseEvent) => {
@@ -89,12 +102,19 @@ const handleMouseMove = (event: MouseEvent) => {
 }
 
 const handleMouseUp = () => {
-  draggingIndex.value = null
+  if (draggingIndex.value !== null) {
+    draggingIndex.value = null
+    // Emit the new weights when user finishes dragging
+    emitWeightChanges()
+  }
 }
 
 onMounted(() => {
   document.addEventListener('mousemove', handleMouseMove)
   document.addEventListener('mouseup', handleMouseUp)
+
+  // Emit initial weights on mount
+  emitWeightChanges()
 })
 
 onUnmounted(() => {
