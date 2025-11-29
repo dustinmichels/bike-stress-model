@@ -15,14 +15,16 @@
               backgroundColor: segment.color,
             }"
           >
-            <span class="segment-label"> {{ segment.name }} ({{ segment.value }}%) </span>
+            <span class="segment-label"> {{ segment.displayName }} ({{ segment.value }}%) </span>
             <!-- Icons inside each segment -->
             <div class="segment-icons">
               <button
                 class="icon-button"
                 :class="{ active: activeView === index }"
                 @click="toggleView(index)"
-                :title="activeView === index ? 'Show all categories' : 'Show only ' + segment.name"
+                :title="
+                  activeView === index ? 'Show all categories' : 'Show only ' + segment.displayName
+                "
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -42,7 +44,7 @@
               <button
                 class="icon-button"
                 @click="openSettings(index)"
-                :title="'Settings for ' + segment.name"
+                :title="'Settings for ' + segment.displayName"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -87,23 +89,55 @@
 </template>
 
 <script setup lang="ts">
+import { DEFAULT_WEIGHTS, type ModelWeights } from '@/data/bikeData'
 import { onMounted, onUnmounted, ref } from 'vue'
 
-interface Segment {
-  name: string
+interface SegmentConfig {
+  displayName: string
+  fieldName: keyof ModelWeights
+  dataField: string | null // Maps to BIKE_INFRASTRUCTURE_DATA field (null if not applicable)
   value: number
   color: string
 }
 
-// Emit event when weights change
+// Props
+interface Props {
+  weights?: ModelWeights
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  weights: () => ({ ...DEFAULT_WEIGHTS }),
+})
+
+// Emit events
 const emit = defineEmits<{
-  weightsChanged: [weights: { separation_level: number; speed: number; busyness: number }]
+  weightsChanged: [weights: ModelWeights]
+  openSettings: [dataField: string]
 }>()
 
-const segments = ref<Segment[]>([
-  { name: 'Separation level', value: 50, color: '#3273dc' },
-  { name: 'Speed', value: 25, color: '#48c774' },
-  { name: 'Busyness', value: 25, color: '#ffdd57' },
+// Segment configuration with mapping to data fields
+const segments = ref<SegmentConfig[]>([
+  {
+    displayName: 'Separation level',
+    fieldName: 'separation_level',
+    dataField: 'separation_level', // Maps to BIKE_INFRASTRUCTURE_DATA.separation_level
+    value: props.weights.separation_level,
+    color: '#3273dc',
+  },
+  {
+    displayName: 'Speed',
+    fieldName: 'speed',
+    dataField: 'speed_limit', // Maps to BIKE_INFRASTRUCTURE_DATA.speed_limit
+    value: props.weights.speed,
+    color: '#48c774',
+  },
+  {
+    displayName: 'Busyness',
+    fieldName: 'busyness',
+    dataField: 'street_classification', // Maps to BIKE_INFRASTRUCTURE_DATA.street_classification
+    value: props.weights.busyness,
+    color: '#ffdd57',
+  },
 ])
 
 const barRef = ref<HTMLElement | null>(null)
@@ -121,18 +155,19 @@ const getCumulativeWidth = (index: number): number => {
 const emitWeightChanges = () => {
   // If a view is active, set other weights to 0 but keep visual slider positions
   if (activeView.value !== null) {
-    const weights = {
+    const weights: ModelWeights = {
       separation_level: activeView.value === 0 ? 100 : 0,
       speed: activeView.value === 1 ? 100 : 0,
       busyness: activeView.value === 2 ? 100 : 0,
     }
     emit('weightsChanged', weights)
   } else {
-    emit('weightsChanged', {
+    const weights: ModelWeights = {
       separation_level: segments.value[0].value,
       speed: segments.value[1].value,
       busyness: segments.value[2].value,
-    })
+    }
+    emit('weightsChanged', weights)
   }
 }
 
@@ -151,11 +186,15 @@ const toggleView = (index: number) => {
 }
 
 /**
- * Placeholder for settings (to be implemented)
+ * Open settings for a specific segment
  */
 const openSettings = (index: number) => {
-  console.log(`Opening settings for ${segments.value[index].name}`)
-  // TODO: Implement settings modal/panel
+  const segment = segments.value[index]
+  if (segment.dataField) {
+    emit('openSettings', segment.dataField)
+  } else {
+    console.warn(`No data field mapped for ${segment.displayName}`)
+  }
 }
 
 const startDrag = (index: number, event: MouseEvent) => {
