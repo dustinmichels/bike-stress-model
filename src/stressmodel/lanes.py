@@ -6,8 +6,7 @@ import pandas as pd
 LanesInput = Union[str, int, float, List[str], None]
 
 LANES_RANKINGS = [
-    (1, 10),  # 1 lane -> 10 points
-    (2, 8),  # 2 lanes -> 8 points
+    (2, 8),  # 1-2 lanes -> 8 points
     (3, 6),  # 3 lanes -> 6 points
     (4, 4),  # 4 lanes -> 4 points
     (5, 2),  # 5 lanes -> 2 points
