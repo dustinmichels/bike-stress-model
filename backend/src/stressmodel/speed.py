@@ -1,6 +1,7 @@
 from typing import List, Union
 
 import numpy as np
+import pandas as pd
 
 SpeedInput = Union[str, float, List[str]]
 
@@ -44,10 +45,11 @@ def extract_maxspeed(value: SpeedInput) -> float:
     return parse_speed(value)
 
 
-def get_speed_score(mph: float, rankings=SPEED_RANKINGS) -> int:
-    """Get score based on speed."""
-    # if np.isnan(mph):
-    #     mph = DEFAULT_SPEED_LIMIT  # Use default when missing
+def get_speed_score(mph: float, rankings=SPEED_RANKINGS) -> Union[int, float]:
+    """Get score based on speed. Returns np.nan if mph is np.nan."""
+    if pd.isna(mph):  # Handle both np.nan and pd.NA
+        return np.nan
+
     for threshold, score in rankings:
         if mph <= threshold:
             return score
@@ -57,7 +59,7 @@ def get_speed_score(mph: float, rankings=SPEED_RANKINGS) -> int:
 def run(df):
     """
     Process the DataFrame to extract maxspeed as integer.
-    Missing speed limits default to 25 mph.
+    Missing speed limits remain null unless DEFAULT_SPEED_LIMIT is set.
 
     Args:
         df: DataFrame with a 'maxspeed' column.
@@ -71,12 +73,13 @@ def run(df):
     # extract maxspeed
     df["maxspeed_int"] = df["maxspeed"].apply(extract_maxspeed)
 
-    # apply default for missing values
+    # apply default for missing values (if configured)
     if DEFAULT_SPEED_LIMIT is not None:
         df["maxspeed_int"] = (
             df["maxspeed_int"].fillna(DEFAULT_SPEED_LIMIT).astype("Int64")
         )
 
+    # calculate score (will be np.nan when maxspeed_int is np.nan)
     df["maxspeed_int_score"] = df["maxspeed_int"].apply(get_speed_score)
 
     # return maxspeed and score series
