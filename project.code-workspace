@@ -11,5 +11,7 @@
       "path": "frontend"
     }
   ],
-  "settings": {}
+  "settings": {
+    "cSpell.words": ["osmnx", "stressmodel"]
+  }
 }

@@ -76,23 +76,23 @@ def prepare_data_for_place(place: str):
     edges = process_network(edges)
 
     # MODEL - SPEED: parse maxspeed
-    print(f"> MODEL: Preparing speed data for {place}")
+    print(f"> MODEL 1: Preparing speed data for {place}")
     edges["maxspeed_int"], edges["maxspeed_int_score"] = sm.speed.run(edges)
 
-    # MODEL - SEPARATION LEVEL: combine cycleway types
-    print(f"> MODEL: Preparing separation level data for {place}")
+    # MODEL - SEPARATION LEVEL: combine cycleway types for separation level
+    print(f"> MODEL 2: Preparing separation level data for {place}")
     edges["separation_level"], edges["separation_level_score"] = (
         sm.separation_level.run(edges)
     )
 
     # MODEL - CATEGORY: classify street types
-    print(f"> MODEL: Preparing street category data for {place}")
+    print(f"> MODEL 3: Preparing street category data for {place}")
     edges["street_classification"], edges["street_classification_score"] = (
         sm.classification.run(edges)
     )
 
     # MODEL - LANES: parse number of lanes
-    print(f"> MODEL: Preparing lanes data for {place}")
+    print(f"> MODEL 4: Preparing lanes data for {place}")
     edges["lanes_int"], edges["lanes_int_score"] = sm.lanes.run(edges)
 
     # TODO: condition (combo of smoothness and condition?) - condition is not standard
