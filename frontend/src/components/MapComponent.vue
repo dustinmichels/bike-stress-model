@@ -208,7 +208,30 @@ onMounted(async () => {
       },
     )
 
-    Stadia_StamenTonerLite.addTo(map)
+    var Stadia_StamenTonerDark = L.tileLayer(
+      'https://tiles.stadiamaps.com/tiles/stamen_toner_dark/{z}/{x}/{y}{r}.{ext}',
+      {
+        minZoom: 0,
+        maxZoom: 20,
+        attribution:
+          '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://www.stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        ext: 'png',
+      },
+    )
+
+    var CartoDB_DarkMatter = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
+      },
+    )
+
+    // Stadia_StamenTonerLite.addTo(map)
+    // CartoDB_DarkMatter.addTo(map)
+    Stadia_StamenTonerDark.addTo(map)
 
     // Add zoom event listener to update line weights dynamically
     map.on('zoomend', () => {
