@@ -13,6 +13,8 @@ LANES_RANKINGS = [
     (float("inf"), 1),  # 6+ lanes -> 1 point
 ]
 
+DEFAULT_LANES = None  # Global default for missing lane values
+
 
 def extract_lanes(value: LanesInput) -> float:
     """
@@ -72,8 +74,14 @@ def run(df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
     # make a copy
     df = df.copy()
 
-    # extract lanes and score
+    # extract lanes
     df["lanes_int"] = df["lanes"].apply(extract_lanes).astype("Int64")
+
+    # fill missing values with default
+    if DEFAULT_LANES is not None:
+        df["lanes_int"] = df["lanes_int"].fillna(DEFAULT_LANES).astype("Int64")
+
+    # score
     df["lanes_int_score"] = df["lanes_int"].apply(get_lanes_score)
 
     # return lanes and score series

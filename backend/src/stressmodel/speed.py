@@ -4,6 +4,8 @@ import numpy as np
 
 SpeedInput = Union[str, float, List[str]]
 
+DEFAULT_SPEED_LIMIT = None  # Global default speed limit in mph
+
 SPEED_RANKINGS = [
     (20, 10),  # <= 20 mph -> 10 points
     (25, 8),  # <= 25 mph -> 8 points
@@ -44,8 +46,8 @@ def extract_maxspeed(value: SpeedInput) -> float:
 
 def get_speed_score(mph: float, rankings=SPEED_RANKINGS) -> int:
     """Get score based on speed."""
-    if np.isnan(mph):
-        return 0
+    # if np.isnan(mph):
+    #     mph = DEFAULT_SPEED_LIMIT  # Use default when missing
     for threshold, score in rankings:
         if mph <= threshold:
             return score
@@ -55,6 +57,7 @@ def get_speed_score(mph: float, rankings=SPEED_RANKINGS) -> int:
 def run(df):
     """
     Process the DataFrame to extract maxspeed as integer.
+    Missing speed limits default to 25 mph.
 
     Args:
         df: DataFrame with a 'maxspeed' column.
@@ -65,8 +68,15 @@ def run(df):
     # make a copy
     df = df.copy()
 
-    # extract maxspeed and score
-    df["maxspeed_int"] = df["maxspeed"].apply(extract_maxspeed).astype("Int64")
+    # extract maxspeed
+    df["maxspeed_int"] = df["maxspeed"].apply(extract_maxspeed)
+
+    # apply default for missing values
+    if DEFAULT_SPEED_LIMIT is not None:
+        df["maxspeed_int"] = (
+            df["maxspeed_int"].fillna(DEFAULT_SPEED_LIMIT).astype("Int64")
+        )
+
     df["maxspeed_int_score"] = df["maxspeed_int"].apply(get_speed_score)
 
     # return maxspeed and score series

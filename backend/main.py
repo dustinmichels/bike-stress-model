@@ -12,7 +12,7 @@ OUT_PATH = "data/out"
 PLACES = [
     "Somerville, Massachusetts, USA",
     "Cambridge, Massachusetts, USA",
-    "Boulder, Colorado, USA",
+    # "Boulder, Colorado, USA",
 ]
 
 # add cycleway to useful tags
@@ -34,6 +34,31 @@ ox.settings.useful_tags_way = ox.settings.useful_tags_way + [
     "parking:left",
     "parking:right",
     "parking:both",
+]
+
+OUTPUT_COLUMNS = [
+    "name",
+    # --- lanes ---
+    "lanes_0",
+    "lanes_int",
+    "lanes_int_score",
+    # --- maxspeed ---
+    "maxspeed_0",
+    "maxspeed_int",
+    "maxspeed_int_score",
+    # --- separation level ---
+    "separation_level",
+    "separation_level_score",
+    # --- street classification ---
+    "street_0",
+    "street_classification",
+    "street_classification_score",
+    # --- composite ---
+    "composite_score",
+    # --- basics ---
+    "width_float",
+    "width_half",
+    "geometry",
 ]
 
 
@@ -146,11 +171,17 @@ def main():
     os.makedirs(OUT_PATH, exist_ok=True)
 
     for place in PLACES:
+        print(f"\nProcessing place: {place}")
+
         nodes, edges = prepare_data_for_place(place)
 
         # also get boundary polygon
         city_gdf = ox.geocode_to_gdf(place)
 
+        # filter down to output columns
+        edges = edges[OUTPUT_COLUMNS]
+
+        # save data
         save_data_for_place(place, OUT_PATH, nodes, edges)
 
         # also save boundary polygon
