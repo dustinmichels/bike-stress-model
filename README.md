@@ -6,6 +6,10 @@ Clear notebooks:
 uv run --with jupyter ./clear_notebooks.sh
 ```
 
+## Dev
+
+Deploy with render??? and fast API
+
 ## Map Types
 
 ### Cycleway Types

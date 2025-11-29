@@ -8,9 +8,12 @@ import src.stressmodel as stressmodel
 from util import extract_width, first_if_list
 
 OUT_PATH = "data/out"
-# PLACE = "Somerville, Massachusetts, USA"
-# PLACE = "Cambridge, Massachusetts, USA"
-PLACE = "Boulder, Colorado, USA"
+
+PLACES = [
+    "Somerville, Massachusetts, USA",
+    "Cambridge, Massachusetts, USA",
+    "Boulder, Colorado, USA",
+]
 
 # add cycleway to useful tags
 ox.settings.useful_tags_way = ox.settings.useful_tags_way + [
@@ -49,12 +52,6 @@ def process_network(edges: pd.DataFrame) -> pd.DataFrame:
     edges = edges.drop(
         ["ref", "service", "access", "bridge", "tunnel", "junction"], axis=1
     )
-
-    # flatten rows if they contain lists
-    # TODO: this should be chose best
-    # rows_to_flatten = ["highway", "lanes"]
-    # for col in rows_to_flatten:
-    #     edges[col] = first_if_list(edges[col])
 
     # parse width
     edges["width_float"] = edges["width"].apply(extract_width).astype("Float64")
@@ -104,6 +101,16 @@ def prepare_data_for_place(place: str):
     # sort columns alphabetically again
     edges = edges.reindex(sorted(edges.columns), axis=1)
 
+    # compute composite score
+    print(f"> MODEL: Preparing composite score for {place}")
+
+    scores = [
+        "maxspeed_int_score",
+        "separation_level_score",
+        "street_classification_score",
+    ]
+    edges["composite_score"] = edges[scores].sum(axis=1) / len(scores)
+
     return nodes, edges
 
 
@@ -127,13 +134,14 @@ def save_data_for_place(place: str, out_path: str, nodes, edges):
 
 def main():
     # delete contents of data/out directory
-    # print("> Clearing data/out")
-    # if os.path.exists(OUT_PATH):
-    #     shutil.rmtree(OUT_PATH)
-    # os.makedirs(OUT_PATH, exist_ok=True)
+    print("> Clearing data/out")
+    if os.path.exists(OUT_PATH):
+        shutil.rmtree(OUT_PATH)
+    os.makedirs(OUT_PATH, exist_ok=True)
 
-    nodes, edges = prepare_data_for_place(PLACE)
-    save_data_for_place(PLACE, OUT_PATH, nodes, edges)
+    for place in PLACES:
+        nodes, edges = prepare_data_for_place(place)
+        save_data_for_place(place, OUT_PATH, nodes, edges)
 
 
 if __name__ == "__main__":
