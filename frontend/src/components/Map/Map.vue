@@ -55,6 +55,7 @@ import { calculateAllScores } from '@/utils/scoreCalculator'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { bindFeaturePopup } from './tooltipUtils'
 
 // Fix Leaflet marker assets
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png'
@@ -270,13 +271,7 @@ const addGeoJsonToMap = (geojsonData: GeoJsonData) => {
 
   geojsonLayer = L.geoJSON(geojsonData, {
     onEachFeature: (feature, layer) => {
-      if (feature.properties) {
-        const popup = Object.entries(feature.properties)
-          .filter(([k]) => !k.startsWith('_')) // Skip internal properties
-          .map(([k, v]) => `<strong>${k}:</strong> ${typeof v === 'number' ? v.toFixed(2) : v}`)
-          .join('<br>')
-        layer.bindPopup(popup)
-      }
+      bindFeaturePopup(feature, layer)
     },
     style: (feature) => {
       const score = feature?.properties?.composite_score ?? 2.5

@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { BIKE_INFRASTRUCTURE_MODEL, DEFAULT_WEIGHTS } from '@/data/bikeData'
+import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
 import type { BikeInfrastructureModel, GeoJsonData, ModelWeights } from '@/types'
 import { onMounted, ref } from 'vue'
 import AboutComponent from './components/AboutComponent.vue'
@@ -49,7 +49,14 @@ const geojsonData = ref<GeoJsonData | null>(null)
 const modelConfig = ref<BikeInfrastructureModel>(
   JSON.parse(JSON.stringify(BIKE_INFRASTRUCTURE_MODEL)),
 )
-const modelWeights = ref<ModelWeights>({ ...DEFAULT_WEIGHTS })
+
+// Extract weights from the model
+const modelWeights = ref<ModelWeights>({
+  separation_level: BIKE_INFRASTRUCTURE_MODEL.separation_level.weight,
+  speed: BIKE_INFRASTRUCTURE_MODEL.speed_limit.weight,
+  busyness: BIKE_INFRASTRUCTURE_MODEL.street_classification.weight,
+})
+
 const settingsDataField = ref<string | null>(null)
 const useGoodColors = ref(true)
 

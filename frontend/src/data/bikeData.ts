@@ -1,4 +1,4 @@
-import type { BikeInfrastructureModel, ModelWeights } from '@/types'
+import type { BikeInfrastructureModel } from '@/types'
 
 /**
  * BIKE INFRASTRUCTURE SCORING MODEL
@@ -31,9 +31,9 @@ export const DEFAULT_CATEGORIES = {
 }
 
 export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
-  // 1️⃣ Separation Level (50%)
+  // 1️⃣ Separation Level (60%)
   separation_level: {
-    weight: 50,
+    weight: 60,
     displayLabel: 'Separation Level',
     defaultCategory: 'none',
     img: '',
@@ -87,9 +87,9 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
     },
   },
 
-  // 2️⃣ Street Classification / Busyness (25%)
+  // 2️⃣ Street Classification / Busyness (20%)
   street_classification: {
-    weight: 25,
+    weight: 20,
     displayLabel: 'Busyness',
     defaultCategory: 'residential',
     img: '',
@@ -112,21 +112,19 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
       'medium-capacity': {
         score: 4,
         displayLabel: 'Medium-Capacity Road',
-        img: 'https://wiki.openstreetmap.org/w/images/4/42/Rendering-highway_secondary_neutral.png',
         notes: 'Arterial roads or collectors with moderate to high traffic volumes',
       },
       motorway: {
         score: 5,
         displayLabel: 'Motorway',
-        img: 'https://wiki.openstreetmap.org/w/images/6/6a/Rendering-highway_motorway_neutral.png',
         notes: 'High-speed highways or motorways (generally prohibited for cyclists)',
       },
     },
   },
 
-  // 3️⃣ Speed Limit (25%)
+  // 3️⃣ Speed Limit (20%)
   speed_limit: {
-    weight: 25,
+    weight: 20,
     displayLabel: 'Speed Limit',
     defaultCategory: 25, // Integer value, will be mapped to '25_mph' category
     img: '',
@@ -171,11 +169,4 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
       },
     },
   },
-}
-
-// Default weights (percentages that sum to 100)
-export const DEFAULT_WEIGHTS: ModelWeights = {
-  separation_level: 50,
-  speed: 25,
-  busyness: 25,
 }
