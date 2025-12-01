@@ -7,7 +7,7 @@
         <div class="calibration-bar" ref="barRef">
           <div
             v-for="(segment, index) in segments"
-            :key="segment.name"
+            :key="segment.fieldName"
             class="segment"
             :class="{ dimmed: activeView !== null && activeView !== index }"
             :style="{
@@ -167,9 +167,9 @@ const emitWeightChanges = () => {
     emit('weightsChanged', weights)
   } else {
     const weights: ModelWeights = {
-      separation_level: segments.value[0].value,
-      speed: segments.value[1].value,
-      busyness: segments.value[2].value,
+      separation_level: segments.value[0]?.value ?? 0,
+      speed: segments.value[1]?.value ?? 0,
+      busyness: segments.value[2]?.value ?? 0,
     }
     emit('weightsChanged', weights)
   }
@@ -194,10 +194,12 @@ const toggleView = (index: number) => {
  */
 const openSettings = (index: number) => {
   const segment = segments.value[index]
-  if (segment.dataField) {
+  if (segment && segment.dataField) {
     emit('openSettings', segment.dataField)
-  } else {
+  } else if (segment) {
     console.warn(`No data field mapped for ${segment.displayName}`)
+  } else {
+    console.warn(`No segment found at index ${index}`)
   }
 }
 
@@ -229,8 +231,10 @@ const handleMouseMove = (event: MouseEvent) => {
   const newRightValue = Math.max(5, nextTotal - (prevTotal + newLeftValue))
 
   // Update both segments
-  segments.value[index].value = newLeftValue
-  segments.value[index + 1].value = newRightValue
+  if (segments.value[index] && segments.value[index + 1]) {
+    segments.value[index].value = newLeftValue
+    segments.value[index + 1]!.value = newRightValue
+  }
 }
 
 const handleMouseUp = () => {

@@ -12,7 +12,7 @@ const badColors = ['#fff7ec', '#fee8c8', '#fdbb84', '#e34a33', '#b30000']
 const getScoreColor = (value: number): string => {
   const normalized = value / 5 // Normalize to 0-1
   const index = Math.min(Math.floor(normalized * badColors.length), badColors.length - 1)
-  return badColors[index]
+  return badColors[index] ?? badColors[0] ?? '#fff7ec'
 }
 
 /**
@@ -80,7 +80,7 @@ export const createFeaturePopup = (feature: GeoJsonFeature): string => {
   }
 
   // Separation Level with score
-  if ('separation_level' in props) {
+  if ('separation_level' in props && props.separation_level !== undefined) {
     html += createFieldWithScore(
       'Separation Level',
       props.separation_level,
@@ -89,7 +89,7 @@ export const createFeaturePopup = (feature: GeoJsonFeature): string => {
   }
 
   // Street Classification with score
-  if ('street_classification' in props) {
+  if ('street_classification' in props && props.street_classification !== undefined) {
     html += createFieldWithScore(
       'Street Classification',
       props.street_classification,
@@ -104,7 +104,7 @@ export const createFeaturePopup = (feature: GeoJsonFeature): string => {
   }
 
   // Composite Score with bar chart
-  if ('composite_score' in props) {
+  if ('composite_score' in props && props.composite_score !== undefined) {
     html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #dbdbdb;">
       <div><strong>Composite Score:</strong> ${props.composite_score.toFixed(2)}</div>`
     html += createScoreBar(props.composite_score)

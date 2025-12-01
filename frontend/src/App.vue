@@ -85,8 +85,9 @@ const handleOpenSettings = (dataField: string) => {
 
 // Handle score updates from SettingsModal
 const handleUpdateScore = (field: string, category: string, score: number) => {
-  if (modelConfig.value[field as keyof BikeInfrastructureModel]?.categories[category]) {
-    modelConfig.value[field as keyof BikeInfrastructureModel].categories[category].score = score
+  const fieldConfig = modelConfig.value[field as keyof BikeInfrastructureModel]
+  if (fieldConfig?.categories[category]) {
+    fieldConfig.categories[category].score = score
   }
 }
 

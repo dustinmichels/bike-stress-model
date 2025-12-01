@@ -113,7 +113,7 @@ const getColorForScore = (score: number): string => {
   const colors = props.useGoodColors ? goodColors : badColors
   const clamped = Math.max(0, Math.min(5, score))
   const idx = Math.round((clamped / 5) * (colors.length - 1))
-  return colors[idx]
+  return colors[idx] ?? colors[0] ?? '#808080'
 }
 
 /* ------------------------------------------------------------
@@ -269,7 +269,7 @@ const addGeoJsonToMap = (geojsonData: GeoJsonData) => {
 
   if (geojsonLayer) map.removeLayer(geojsonLayer)
 
-  geojsonLayer = L.geoJSON(geojsonData, {
+  geojsonLayer = L.geoJSON(geojsonData as any, {
     onEachFeature: (feature, layer) => {
       bindFeaturePopup(feature, layer)
     },
