@@ -1,6 +1,30 @@
 <template>
   <div class="box model-component">
     <h2 class="title is-4">Customize Weights</h2>
+
+    <div class="instruction-highlight">
+      <span class="icon-text">
+        <span class="icon has-text-info">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </span>
+        <span>Drag the sliders to adjust the weights for each factor.</span>
+      </span>
+    </div>
+
     <div class="content">
       <div class="calibration-container">
         <!-- Calibration bar -->
@@ -269,6 +293,32 @@ onUnmounted(() => {
 
 .title {
   margin-bottom: 1rem;
+}
+
+.instruction-highlight {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  background-color: #f0f7ff;
+  border-left: 3px solid #3273dc;
+  border-radius: 4px;
+  color: #4a4a4a;
+  font-size: 0.95rem;
+}
+
+.icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.has-text-info {
+  color: #3273dc;
 }
 
 .content {
