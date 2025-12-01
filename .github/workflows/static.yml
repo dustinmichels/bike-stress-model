@@ -19,7 +19,7 @@ jobs:
 
       - name: Build project
         working-directory: ./frontend
-        run: bun build src/index.tsx --outdir dist --public-path=/REPO_NAME/
+        run: bun build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
