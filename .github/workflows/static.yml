@@ -1,5 +1,4 @@
-# .github/workflows/pages.yml
-name: Deploy static site
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -15,15 +14,17 @@ jobs:
         uses: oven-sh/setup-bun@v1
 
       - name: Install dependencies
+        working-directory: ./frontend
         run: bun install
 
       - name: Build project
-        run: bun build src/index.tsx --outdir=dist --public-path=/your-repo-name/
+        working-directory: ./frontend
+        run: bun build src/index.tsx --outdir dist --public-path=/REPO_NAME/
 
-      - name: Upload build artifacts
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ./frontend/dist
 
   deploy:
     needs: build
