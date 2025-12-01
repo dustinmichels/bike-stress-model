@@ -19,7 +19,7 @@ jobs:
 
       - name: Build project
         working-directory: ./frontend
-        run: bun build
+        run: bun run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
