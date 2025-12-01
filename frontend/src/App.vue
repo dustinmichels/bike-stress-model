@@ -63,8 +63,7 @@ const useGoodColors = ref(true)
 // Load GeoJSON data on mount
 onMounted(async () => {
   try {
-    const response = await fetch(new URL('somerville_streets.geojson', import.meta.env.BASE_URL))
-    // const response = await fetch('/cambridge_streets.geojson')
+    const response = await fetch(import.meta.env.BASE_URL + 'somerville_streets.geojson') // const response = await fetch('/cambridge_streets.geojson')
     if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
     const data = await response.json()
     geojsonData.value = data
