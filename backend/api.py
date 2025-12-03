@@ -10,7 +10,7 @@ from main import OUTPUT_COLUMNS, prepare_data_for_place
 
 app = FastAPI(title="Bike Stress Network API")
 
-# ADD CORS MIDDLEWARE - This is the fix!
+# ADD CORS MIDDLEWARE
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
