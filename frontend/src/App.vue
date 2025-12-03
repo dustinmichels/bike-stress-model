@@ -33,7 +33,11 @@
     />
 
     <!-- Export Map Modal -->
-    <ExportMapModal :is-open="isExportModalOpen" @close="isExportModalOpen = false" />
+    <ExportMapModal
+      :is-open="isExportModalOpen"
+      :model-config="modelConfig"
+      @close="isExportModalOpen = false"
+    />
   </div>
 </template>
 
