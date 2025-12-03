@@ -65,8 +65,8 @@ OUTPUT_COLUMNS = [
 def get_network(place: str, network_type: str = "bike"):
     G = ox.graph_from_place(place, network_type=network_type)
 
-    # project graph to EPSG:26986 (Massachusetts Mainland)
-    G = ox.project_graph(G, to_crs="EPSG:26986")
+    # project graph to UTM
+    G = ox.project_graph(G)
 
     # consolidate intersections within 10 meters
     G = ox.consolidate_intersections(G, tolerance=10)
@@ -128,9 +128,6 @@ def prepare_data_for_place(place: str):
     # MODEL - LANES: parse number of lanes
     print(f"> MODEL 4: Preparing lanes data for {place}")
     edges["lanes_int"], edges["lanes_int_score"] = sm.lanes.run(edges)
-
-    # TODO: condition (combo of smoothness and condition?) - condition is not standard
-    # TODO: number of lanes (ideally in direction of travel)
 
     # copy some OG vals so they are easy to compare with new vals
     edges["street_0"] = edges["highway"]
