@@ -113,8 +113,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ModelWeights } from '@/types'
-import { onMounted, onUnmounted, ref } from 'vue'
+import type { BikeInfrastructureModel, ModelWeights } from '@/types'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 interface SegmentConfig {
   displayName: string
@@ -126,16 +126,17 @@ interface SegmentConfig {
 
 // Props
 interface Props {
-  weights?: ModelWeights
+  modelConfig: BikeInfrastructureModel
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  weights: () => ({
-    separation_level: 50,
-    speed: 25,
-    busyness: 25,
-  }),
-})
+const props = defineProps<Props>()
+
+// Extract weights from modelConfig
+const weights = computed<ModelWeights>(() => ({
+  separation_level: props.modelConfig.separation_level.weight,
+  speed: props.modelConfig.speed_limit.weight,
+  busyness: props.modelConfig.street_classification.weight,
+}))
 
 // Emit events
 const emit = defineEmits<{
@@ -149,21 +150,21 @@ const segments = ref<SegmentConfig[]>([
     displayName: 'Separation level',
     fieldName: 'separation_level',
     dataField: 'separation_level',
-    value: props.weights.separation_level,
+    value: weights.value.separation_level,
     color: '#3273dc',
   },
   {
     displayName: 'Speed',
     fieldName: 'speed',
     dataField: 'speed_limit',
-    value: props.weights.speed,
+    value: weights.value.speed,
     color: '#48c774',
   },
   {
     displayName: 'Busyness',
     fieldName: 'busyness',
     dataField: 'street_classification',
-    value: props.weights.busyness,
+    value: weights.value.busyness,
     color: '#ffdd57',
   },
 ])

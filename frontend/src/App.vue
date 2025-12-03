@@ -5,19 +5,19 @@
         <MapComponent
           :geojson-data="geojsonData"
           :model-config="modelConfig"
-          :model-weights="modelWeights"
           :use-good-colors="useGoodColors"
           @toggle-colors="useGoodColors = !useGoodColors"
         />
       </div>
-      <div class="column is-one-third">
+      <div class="column is-one-third right-column">
         <AboutComponent />
+        <ExportMap @open-modal="isExportModalOpen = true" />
       </div>
     </div>
     <div class="columns bottom-row">
       <div class="column">
         <ModelComponent
-          :weights="modelWeights"
+          :model-config="modelConfig"
           @weights-changed="handleWeightsChanged"
           @open-settings="handleOpenSettings"
         />
@@ -31,6 +31,9 @@
       @close="settingsDataField = null"
       @update-score="handleUpdateScore"
     />
+
+    <!-- Export Map Modal -->
+    <ExportMapModal :is-open="isExportModalOpen" @close="isExportModalOpen = false" />
   </div>
 </template>
 
@@ -39,6 +42,8 @@ import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
 import type { BikeInfrastructureModel, GeoJsonData, ModelWeights } from '@/types'
 import { onMounted, ref } from 'vue'
 import AboutComponent from './components/AboutComponent.vue'
+import ExportMap from './components/ExportMap.vue'
+import ExportMapModal from './components/ExportMapModal.vue'
 import MapComponent from './components/Map/Map.vue'
 import ModelComponent from './components/ModelComponent.vue'
 import SettingsModal from './components/SettingsModal.vue'
@@ -49,15 +54,9 @@ const modelConfig = ref<BikeInfrastructureModel>(
   JSON.parse(JSON.stringify(BIKE_INFRASTRUCTURE_MODEL)),
 )
 
-// Extract weights from the model
-const modelWeights = ref<ModelWeights>({
-  separation_level: BIKE_INFRASTRUCTURE_MODEL.separation_level.weight,
-  speed: BIKE_INFRASTRUCTURE_MODEL.speed_limit.weight,
-  busyness: BIKE_INFRASTRUCTURE_MODEL.street_classification.weight,
-})
-
 const settingsDataField = ref<string | null>(null)
 const useGoodColors = ref(true)
+const isExportModalOpen = ref(false)
 
 // Load GeoJSON data on mount
 onMounted(async () => {
@@ -73,7 +72,10 @@ onMounted(async () => {
 
 // Handle weight changes from ModelComponent
 const handleWeightsChanged = (weights: ModelWeights) => {
-  modelWeights.value = { ...weights }
+  // Update weights in modelConfig
+  modelConfig.value.separation_level.weight = weights.separation_level
+  modelConfig.value.speed_limit.weight = weights.speed
+  modelConfig.value.street_classification.weight = weights.busyness
 }
 
 // Handle opening settings modal
@@ -112,5 +114,10 @@ const handleUpdateScore = (field: string, category: string, score: number) => {
 .column {
   padding: 0.25rem;
   display: flex;
+}
+
+.right-column {
+  flex-direction: column;
+  gap: 0.5rem;
 }
 </style>

@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import type { BikeInfrastructureModel, GeoJsonData, GeoJsonFeature, ModelWeights } from '@/types'
+import type { BikeInfrastructureModel, GeoJsonData, GeoJsonFeature } from '@/types'
 import { badColors, goodColors } from '@/utils/colorScale'
 import { calculateAllScores } from '@/utils/scoreCalculator'
 import L from 'leaflet'
@@ -75,12 +75,18 @@ L.Marker.prototype.options.icon = DefaultIcon
 interface Props {
   geojsonData: GeoJsonData | null
   modelConfig: BikeInfrastructureModel
-  modelWeights: ModelWeights
   useGoodColors?: boolean
 }
 const props = withDefaults(defineProps<Props>(), {
   useGoodColors: true,
 })
+
+// Extract weights from modelConfig
+const modelWeights = computed(() => ({
+  separation_level: props.modelConfig.separation_level.weight,
+  speed: props.modelConfig.speed_limit.weight,
+  busyness: props.modelConfig.street_classification.weight,
+}))
 
 // Emits
 const emit = defineEmits<{
@@ -143,7 +149,7 @@ const computedGeoJson = computed<GeoJsonData | null>(() => {
     delete feature.properties.composite_score
 
     // Calculate fresh scores
-    const scores = calculateAllScores(feature.properties, props.modelConfig, props.modelWeights)
+    const scores = calculateAllScores(feature.properties, props.modelConfig, modelWeights.value)
 
     // Add newly computed scores to properties
     Object.assign(feature.properties, scores)
