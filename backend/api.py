@@ -11,14 +11,23 @@ from main import OUTPUT_COLUMNS, prepare_data_for_place
 app = FastAPI(title="Bike Stress Network API")
 
 # Add CORS middleware
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=[
+#         "http://localhost:5173",
+#         "http://localhost:3000",
+#         "https://dustinmichels.github.io",  # Production URL
+#     ],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# Add CORS middleware - more permissive version
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://dustinmichels.github.io",  # Production URL
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins temporarily for testing
+    allow_credentials=False,  # Set to False when using wildcard
     allow_methods=["*"],
     allow_headers=["*"],
 )
