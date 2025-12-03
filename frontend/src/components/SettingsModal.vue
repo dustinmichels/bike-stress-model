@@ -44,51 +44,6 @@
             </div>
           </div>
 
-          <!-- Default Category Selector at Bottom -->
-          <div class="box mt-4 default-category-box">
-            <div class="default-header mb-2">
-              <span class="icon-text">
-                <span class="icon">
-                  <i class="fas fa-info-circle"></i>
-                </span>
-                <span class="has-text-weight-semibold">Default Value (for missing data)</span>
-              </span>
-            </div>
-            <p class="is-size-7 mb-3">
-              When a street is missing this property, use this category as the default:
-            </p>
-
-            <!-- For speed_limit (number input) -->
-            <div v-if="dataField === 'speed_limit'" class="field">
-              <div class="control">
-                <input
-                  class="input is-small"
-                  type="number"
-                  v-model.number="localDefaultCategory"
-                  @change="onDefaultCategoryChange"
-                  min="0"
-                  max="100"
-                  step="5"
-                  placeholder="e.g., 25"
-                />
-              </div>
-              <p class="help">Integer value (e.g., 25, 30, 40)</p>
-            </div>
-
-            <!-- For other parameters (dropdown) -->
-            <div v-else class="field">
-              <div class="control">
-                <div class="select is-fullwidth is-small">
-                  <select v-model="localDefaultCategory" @change="onDefaultCategoryChange">
-                    <option v-for="(category, key) in localCategories" :key="key" :value="key">
-                      {{ category.displayLabel }}
-                    </option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <a
             v-if="parameterData.link"
             :href="parameterData.link"
@@ -121,7 +76,6 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   close: []
   updateScore: [field: string, category: string, score: number]
-  updateDefaultCategory: [field: string, defaultCategory: string | number]
 }>()
 
 // Color palette
@@ -135,7 +89,6 @@ const colors = {
 
 // Local state for categories with scores
 const localCategories = ref<Record<string, any>>({})
-const localDefaultCategory = ref<string | number>('')
 
 // Computed property to get the parameter data
 const parameterData = computed(() => {
@@ -161,18 +114,6 @@ watch(
     if (parameterData.value?.categories) {
       localCategories.value = JSON.parse(JSON.stringify(parameterData.value.categories))
     }
-    if (parameterData.value?.defaultCategory !== undefined) {
-      localDefaultCategory.value = parameterData.value.defaultCategory
-    } else {
-      // Fallback defaults if not set
-      if (props.dataField === 'separation_level') {
-        localDefaultCategory.value = 'none'
-      } else if (props.dataField === 'street_classification') {
-        localDefaultCategory.value = 'residential'
-      } else if (props.dataField === 'speed_limit') {
-        localDefaultCategory.value = 25
-      }
-    }
   },
   { immediate: true },
 )
@@ -192,13 +133,6 @@ const onScoreChange = (categoryKey: string, event: Event) => {
   }
 }
 
-// Handle default category change
-const onDefaultCategoryChange = () => {
-  if (props.dataField) {
-    emit('updateDefaultCategory', props.dataField, localDefaultCategory.value)
-  }
-}
-
 // Reset all scores to original values
 const resetScores = () => {
   if (!props.dataField) return
@@ -215,12 +149,6 @@ const resetScores = () => {
         emit('updateScore', props.dataField!, categoryKey, originalScore)
       }
     })
-
-    // Reset default category
-    if (originalData.defaultCategory !== undefined) {
-      localDefaultCategory.value = originalData.defaultCategory
-      emit('updateDefaultCategory', props.dataField, originalData.defaultCategory)
-    }
   }
 }
 
@@ -395,17 +323,6 @@ onUnmounted(() => {
   font-size: 1rem;
   min-width: 2.5rem;
   text-align: right;
-}
-
-/* Default Category Box */
-.default-category-box {
-  background-color: #fffbeb !important;
-  border: 1px solid #fcd34d;
-  border-left: 4px solid v-bind('colors.primary') !important;
-}
-
-.default-header {
-  color: v-bind('colors.dark');
 }
 
 .learn-more-button {

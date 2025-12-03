@@ -2,26 +2,24 @@ import type { BikeInfrastructureModel, ModelWeights, StreetProperties } from '@/
 
 /**
  * Calculate the separation level score for a street
- * Uses the 'separation_level' field from GeoJSON (e.g., "lane", "track", "none")
+ * Returns null if data is missing
  */
 export const calculateSeparationScore = (
   properties: StreetProperties,
   modelConfig: BikeInfrastructureModel,
-): number => {
+): number | null => {
   const category = properties.separation_level
 
+  // Return null if data is missing
   if (!category) {
-    const defaultCat = modelConfig.separation_level.defaultCategory || 'none'
-    const score = modelConfig.separation_level.categories[String(defaultCat)]?.score ?? 5
-    return score
+    return null
   }
 
   const score = modelConfig.separation_level.categories[category]?.score
 
   if (score === undefined) {
-    console.warn(`Unknown separation_level category '${category}', using default`)
-    const defaultCat = modelConfig.separation_level.defaultCategory || 'none'
-    return modelConfig.separation_level.categories[String(defaultCat)]?.score ?? 5
+    console.warn(`Unknown separation_level category '${category}'`)
+    return null
   }
 
   return score
@@ -29,26 +27,24 @@ export const calculateSeparationScore = (
 
 /**
  * Calculate the street classification score for a street
- * Uses the 'street_classification' field from GeoJSON (e.g., "residential", "medium-capacity")
+ * Returns null if data is missing
  */
 export const calculateStreetClassificationScore = (
   properties: StreetProperties,
   modelConfig: BikeInfrastructureModel,
-): number => {
+): number | null => {
   const category = properties.street_classification
 
+  // Return null if data is missing
   if (!category) {
-    const defaultCat = modelConfig.street_classification.defaultCategory || 'residential'
-    const score = modelConfig.street_classification.categories[String(defaultCat)]?.score ?? 2
-    return score
+    return null
   }
 
   const score = modelConfig.street_classification.categories[category]?.score
 
   if (score === undefined) {
-    console.warn(`Unknown street_classification category '${category}', using default`)
-    const defaultCat = modelConfig.street_classification.defaultCategory || 'residential'
-    return modelConfig.street_classification.categories[String(defaultCat)]?.score ?? 2
+    console.warn(`Unknown street_classification category '${category}'`)
+    return null
   }
 
   return score
@@ -56,12 +52,12 @@ export const calculateStreetClassificationScore = (
 
 /**
  * Calculate the speed limit score for a street
- * Uses the 'maxspeed_int' field from GeoJSON (integer value like 25, 30, 40)
+ * Returns null if data is missing
  */
 export const calculateSpeedScore = (
   properties: StreetProperties,
   modelConfig: BikeInfrastructureModel,
-): number => {
+): number | null => {
   const maxspeedValue = properties.maxspeed_int
 
   // Helper function to map speed to category
@@ -74,30 +70,25 @@ export const calculateSpeedScore = (
     return 'over_50_mph'
   }
 
+  // Return null if data is missing
   if (maxspeedValue === undefined || maxspeedValue === null) {
-    const defaultSpeed = Number(modelConfig.speed_limit.defaultCategory) || 25
-    const category = speedToCategory(defaultSpeed)
-    return modelConfig.speed_limit.categories[category]?.score ?? 1
+    return null
   }
 
   // Convert to number if it's a string
   const speed = typeof maxspeedValue === 'number' ? maxspeedValue : parseInt(String(maxspeedValue))
 
   if (isNaN(speed)) {
-    console.warn(`Invalid maxspeed_int value '${maxspeedValue}', using default`)
-    const defaultSpeed = Number(modelConfig.speed_limit.defaultCategory) || 25
-    const category = speedToCategory(defaultSpeed)
-    return modelConfig.speed_limit.categories[category]?.score ?? 1
+    console.warn(`Invalid maxspeed_int value '${maxspeedValue}'`)
+    return null
   }
 
   const category = speedToCategory(speed)
   const score = modelConfig.speed_limit.categories[category]?.score
 
   if (score === undefined) {
-    console.warn(`Unknown speed category '${category}', using default`)
-    const defaultSpeed = Number(modelConfig.speed_limit.defaultCategory) || 25
-    const defaultCategory = speedToCategory(defaultSpeed)
-    return modelConfig.speed_limit.categories[defaultCategory]?.score ?? 1
+    console.warn(`Unknown speed category '${category}'`)
+    return null
   }
 
   return score
@@ -105,29 +96,44 @@ export const calculateSpeedScore = (
 
 /**
  * Calculate the composite score using weighted average
+ * Only includes available (non-null) scores in the calculation
+ * Returns null if all scores are missing
  */
 export const calculateCompositeScore = (
-  separationScore: number,
-  streetClassScore: number,
-  speedScore: number,
+  separationScore: number | null,
+  streetClassScore: number | null,
+  speedScore: number | null,
   weights: ModelWeights,
-): number => {
-  // Convert percentage weights to proportions
-  const total = weights.separation_level + weights.speed + weights.busyness
+): number | null => {
+  // Collect available scores with their weights
+  const availableScores: { score: number; weight: number }[] = []
 
-  if (total === 0) return 0
-
-  const normalizedWeights = {
-    separation: weights.separation_level / total,
-    speed: weights.speed / total,
-    busyness: weights.busyness / total,
+  if (separationScore !== null) {
+    availableScores.push({ score: separationScore, weight: weights.separation_level })
+  }
+  if (speedScore !== null) {
+    availableScores.push({ score: speedScore, weight: weights.speed })
+  }
+  if (streetClassScore !== null) {
+    availableScores.push({ score: streetClassScore, weight: weights.busyness })
   }
 
-  return (
-    separationScore * normalizedWeights.separation +
-    speedScore * normalizedWeights.speed +
-    streetClassScore * normalizedWeights.busyness
-  )
+  // If no scores are available, return null
+  if (availableScores.length === 0) {
+    return null
+  }
+
+  // Calculate total weight of available scores
+  const totalWeight = availableScores.reduce((sum, item) => sum + item.weight, 0)
+
+  if (totalWeight === 0) {
+    return null
+  }
+
+  // Calculate weighted average using only available scores
+  const weightedSum = availableScores.reduce((sum, item) => sum + item.score * item.weight, 0)
+
+  return weightedSum / totalWeight
 }
 
 /**
@@ -140,10 +146,10 @@ export const calculateAllScores = (
   modelConfig: BikeInfrastructureModel,
   weights: ModelWeights,
 ): {
-  separation_level_score: number
-  street_classification_score: number
-  maxspeed_int_score: number
-  composite_score: number
+  separation_level_score: number | null
+  street_classification_score: number | null
+  maxspeed_int_score: number | null
+  composite_score: number | null
 } => {
   const separationScore = calculateSeparationScore(properties, modelConfig)
   const streetClassScore = calculateStreetClassificationScore(properties, modelConfig)
@@ -170,6 +176,11 @@ export const calculateAllScores = (
       },
       weights,
       finalComposite: compositeScore,
+      missingData: {
+        separation: separationScore === null,
+        streetClass: streetClassScore === null,
+        speed: speedScore === null,
+      },
     })
     calculationCount++
   }

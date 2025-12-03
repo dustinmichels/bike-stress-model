@@ -24,6 +24,12 @@
       <div class="legend-labels">
         <span v-for="n in legendColors.length" :key="n - 1">{{ n - 1 }}</span>
       </div>
+
+      <!-- Missing data indicator -->
+      <div class="legend-missing">
+        <div class="legend-missing-block"></div>
+        <span class="legend-missing-label">No data</span>
+      </div>
     </div>
 
     <!-- Boundary Toggle -->
@@ -107,13 +113,20 @@ let boundaryLayer: L.GeoJSON | null = null
   COLOR SCALE
 ------------------------------------------------------------ */
 
+const MISSING_DATA_COLOR = '#808080' // Grey for missing data
+
 const legendColors = computed(() => (props.useGoodColors ? goodColors : badColors))
 
-const getColorForScore = (score: number): string => {
+const getColorForScore = (score: number | null): string => {
+  // Return grey if score is null (missing data)
+  if (score === null || score === undefined) {
+    return MISSING_DATA_COLOR
+  }
+
   const colors = props.useGoodColors ? goodColors : badColors
   const clamped = Math.max(0, Math.min(5, score))
   const idx = Math.round((clamped / 5) * (colors.length - 1))
-  return colors[idx] ?? colors[0] ?? '#808080'
+  return colors[idx] ?? colors[0] ?? MISSING_DATA_COLOR
 }
 
 /* ------------------------------------------------------------
@@ -126,7 +139,8 @@ const computedGeoJson = computed<GeoJsonData | null>(() => {
   // Deep copy the GeoJSON
   const data = JSON.parse(JSON.stringify(props.geojsonData))
 
-  const scoresSummary: number[] = []
+  const scoresSummary: (number | null)[] = []
+  let missingDataCount = 0
 
   // Calculate scores for each feature
   data.features.forEach((feature: GeoJsonFeature, index: number) => {
@@ -144,6 +158,11 @@ const computedGeoJson = computed<GeoJsonData | null>(() => {
     Object.assign(feature.properties, scores)
     scoresSummary.push(scores.composite_score)
 
+    // Count missing data
+    if (scores.composite_score === null) {
+      missingDataCount++
+    }
+
     // Log first 5 features for debugging
     if (index < 5) {
       console.log(`Feature ${index}:`, {
@@ -156,22 +175,34 @@ const computedGeoJson = computed<GeoJsonData | null>(() => {
     }
   })
 
+  // Filter out null scores for statistics
+  const validScores = scoresSummary.filter((s): s is number => s !== null)
+
   // Log score distribution
-  const uniqueScores = new Set(scoresSummary)
+  const uniqueScores = new Set(validScores)
   console.log('Score calculation summary:', {
     totalFeatures: data.features.length,
+    missingDataFeatures: missingDataCount,
+    featuresWithData: validScores.length,
     uniqueScores: uniqueScores.size,
-    scoreRange: {
-      min: Math.min(...scoresSummary),
-      max: Math.max(...scoresSummary),
-      avg: (scoresSummary.reduce((a, b) => a + b, 0) / scoresSummary.length).toFixed(2),
-    },
+    scoreRange:
+      validScores.length > 0
+        ? {
+            min: Math.min(...validScores),
+            max: Math.max(...validScores),
+            avg: (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(2),
+          }
+        : 'No valid scores',
     sampleScores: scoresSummary.slice(0, 10),
   })
 
-  if (uniqueScores.size === 1) {
-    console.warn('⚠️ ALL STREETS HAVE THE SAME SCORE:', scoresSummary[0])
+  if (uniqueScores.size === 1 && validScores.length > 0) {
+    console.warn('⚠️ ALL STREETS WITH DATA HAVE THE SAME SCORE:', validScores[0])
     console.warn('This means the scoring logic is not varying. Check the logs above.')
+  }
+
+  if (missingDataCount > 0) {
+    console.log(`ℹ️ ${missingDataCount} streets have missing data and will be colored grey`)
   }
 
   return data
@@ -211,7 +242,7 @@ onMounted(async () => {
         const lineWeight = getLineWeight(zoom)
 
         geojsonLayer.setStyle((feature) => {
-          const score = feature?.properties?.composite_score ?? 2.5
+          const score = feature?.properties?.composite_score ?? null
           return {
             color: getColorForScore(score),
             weight: lineWeight,
@@ -274,7 +305,7 @@ const addGeoJsonToMap = (geojsonData: GeoJsonData) => {
       bindFeaturePopup(feature, layer)
     },
     style: (feature) => {
-      const score = feature?.properties?.composite_score ?? 2.5
+      const score = feature?.properties?.composite_score ?? null
       const zoom = map?.getZoom() ?? 15
 
       return {
@@ -306,7 +337,7 @@ watch(
   () => {
     if (geojsonLayer) {
       geojsonLayer.setStyle((feature) => {
-        const score = feature?.properties?.composite_score ?? 2.5
+        const score = feature?.properties?.composite_score ?? null
         const zoom = map?.getZoom() ?? 15
         return {
           color: getColorForScore(score),
@@ -384,6 +415,28 @@ const toggleBoundary = () => {
 .legend-labels span {
   width: 20px;
   text-align: center;
+}
+
+.legend-missing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.legend-missing-block {
+  width: 30px;
+  height: 20px;
+  background-color: #808080;
+  border-radius: 2px;
+  border: 1px solid #ccc;
+}
+
+.legend-missing-label {
+  font-size: 11px;
+  color: #666;
 }
 
 /* Boundary toggle */

@@ -17,10 +17,21 @@ const getScoreColor = (value: number): string => {
 
 /**
  * Creates a small bar chart for score visualization
- * @param value - The score value (0-5)
- * @returns HTML string for the bar chart
+ * @param value - The score value (0-5), or null if no data
+ * @returns HTML string for the bar chart or "No data" message
  */
-const createScoreBar = (value: number): string => {
+const createScoreBar = (value: number | null): string => {
+  // Handle null/undefined values
+  if (value === null || value === undefined) {
+    return `
+      <div style="background: #f5f5f5; border-radius: 3px; height: 16px; overflow: hidden; position: relative; margin-top: 4px;">
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-style: italic; color: #999;">
+          No data
+        </div>
+      </div>
+    `
+  }
+
   const percentage = Math.round((value / 5) * 100)
   const barColor = getScoreColor(value)
 
@@ -38,13 +49,13 @@ const createScoreBar = (value: number): string => {
  * Creates a field with optional score bar
  * @param label - The field label
  * @param value - The field value
- * @param scoreValue - Optional score value to display as bar chart
+ * @param scoreValue - Optional score value to display as bar chart (can be null)
  * @returns HTML string for the field
  */
 const createFieldWithScore = (
   label: string,
   value: string | number,
-  scoreValue?: number,
+  scoreValue?: number | null,
 ): string => {
   const formattedValue = typeof value === 'number' ? value.toFixed(2) : value
   let html = `<div style="margin-bottom: 12px;">
@@ -104,11 +115,21 @@ export const createFeaturePopup = (feature: GeoJsonFeature): string => {
   }
 
   // Composite Score with bar chart
-  if ('composite_score' in props && props.composite_score !== undefined) {
-    html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #dbdbdb;">
-      <div><strong>Composite Score:</strong> ${props.composite_score.toFixed(2)}</div>`
-    html += createScoreBar(props.composite_score)
-    html += '</div>'
+  if ('composite_score' in props) {
+    const compositeScore = props.composite_score
+
+    if (compositeScore !== null && compositeScore !== undefined) {
+      html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #dbdbdb;">
+        <div><strong>Composite Score:</strong> ${compositeScore.toFixed(2)}</div>`
+      html += createScoreBar(compositeScore)
+      html += '</div>'
+    } else {
+      // Show "No data" for composite score
+      html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #dbdbdb;">
+        <div><strong>Composite Score:</strong> <span style="font-style: italic; color: #999;">No data</span></div>`
+      html += createScoreBar(null)
+      html += '</div>'
+    }
   }
 
   html += '</div>'
@@ -159,6 +180,11 @@ export const createCustomPopup = (feature: GeoJsonFeature, options: PopupOptions
 
   return entries
     .map(([key, value]) => {
+      // Handle null values
+      if (value === null || value === undefined) {
+        return `<strong>${key}:</strong> <span style="font-style: italic; color: #999;">No data</span>`
+      }
+
       // Use custom formatter if available
       const formattedValue = formatters[key]
         ? formatters[key](value)
