@@ -32,14 +32,6 @@
       </div>
     </div>
 
-    <!-- Boundary Toggle -->
-    <div class="boundary-toggle">
-      <label class="checkbox">
-        <input type="checkbox" v-model="showBoundary" @change="toggleBoundary" />
-        Show Boundary
-      </label>
-    </div>
-
     <!-- Color Scale Toggle -->
     <div class="color-toggle">
       <div class="toggle-container">
@@ -99,7 +91,6 @@ const emit = defineEmits<{
 const mapContainer = ref<HTMLElement | null>(null)
 const error = ref('')
 const loading = ref(false)
-const showBoundary = ref(true)
 
 // Boundary data
 const boundaryGeoJson = ref<any | null>(null)
@@ -348,14 +339,6 @@ watch(
     }
   },
 )
-
-/* ------------------------------------------------------------
-  BOUNDARY TOGGLE
------------------------------------------------------------- */
-const toggleBoundary = () => {
-  if (!map || !boundaryLayer) return
-  showBoundary.value ? map.addLayer(boundaryLayer) : map.removeLayer(boundaryLayer)
-}
 </script>
 
 <style scoped>
@@ -439,28 +422,10 @@ const toggleBoundary = () => {
   color: #666;
 }
 
-/* Boundary toggle */
-.boundary-toggle {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  background: white;
-  padding: 10px 15px;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-}
-
-.boundary-toggle .checkbox {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
 /* Color toggle */
 .color-toggle {
   position: absolute;
-  bottom: 80px;
+  bottom: 50px;
   right: 20px;
   background: white;
   padding: 10px 15px;
