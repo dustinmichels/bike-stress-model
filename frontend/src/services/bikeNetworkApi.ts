@@ -13,6 +13,7 @@ export interface BikeNetworkResponse {
 }
 
 const API_BASE_URL = 'https://bike-stress-model.onrender.com'
+// const API_BASE_URL = 'https://corsproxy.io/?https://bike-stress-model.onrender.com'
 
 /**
  * Fetch bike network GeoJSON data for a given city
