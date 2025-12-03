@@ -56,7 +56,14 @@
           </span>
         </div>
         <div class="control">
-          <button class="button is-info" @click="handleSubmit">Submit</button>
+          <button
+            class="button is-info"
+            @click="handleSubmit"
+            :class="{ 'is-loading': isLoadingNetwork }"
+            :disabled="isLoadingNetwork || !searchQuery.trim()"
+          >
+            Submit
+          </button>
         </div>
       </div>
 
@@ -83,6 +90,8 @@
 </template>
 
 <script setup lang="ts">
+import { fetchBikeNetwork } from '@/services/bikeNetworkApi'
+import type { GeoJsonData } from '@/types'
 import { ref, type Ref } from 'vue'
 
 interface NominatimResult {
@@ -97,12 +106,14 @@ interface NominatimResult {
 // Define emits
 const emit = defineEmits<{
   locationSelected: [location: { lat: number; lon: number; name: string }]
+  networkDataLoaded: [data: GeoJsonData]
 }>()
 
 const searchQuery: Ref<string> = ref('')
 const suggestions: Ref<NominatimResult[]> = ref([])
 const showDropdown: Ref<boolean> = ref(false)
 const isSearching: Ref<boolean> = ref(false)
+const isLoadingNetwork: Ref<boolean> = ref(false)
 let searchTimeout: number | null = null
 
 const onSearchInput = () => {
@@ -179,9 +190,30 @@ const onBlur = () => {
   }, 200)
 }
 
-const handleSubmit = () => {
-  // TODO: Implement submit functionality
-  console.log('Submit clicked')
+const handleSubmit = async () => {
+  const cityName = searchQuery.value.trim()
+
+  if (!cityName) {
+    console.warn('Please enter a city name')
+    return
+  }
+
+  isLoadingNetwork.value = true
+
+  try {
+    console.log(`Fetching bike network data for: ${cityName}`)
+    const networkData = await fetchBikeNetwork(cityName)
+
+    // Emit the network data to parent component
+    emit('networkDataLoaded', networkData)
+
+    console.log('Network data loaded successfully')
+  } catch (error) {
+    console.error('Error loading bike network:', error)
+    alert(`Failed to load bike network data for ${cityName}. Please try another location.`)
+  } finally {
+    isLoadingNetwork.value = false
+  }
 }
 </script>
 

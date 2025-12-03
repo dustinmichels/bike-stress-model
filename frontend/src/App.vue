@@ -11,7 +11,7 @@
         />
       </div>
       <div class="column is-one-third">
-        <AboutComponent />
+        <AboutComponent @network-data-loaded="handleNetworkDataLoaded" />
       </div>
     </div>
     <div class="columns bottom-row">
@@ -95,6 +95,12 @@ const handleUpdateDefaultCategory = (field: string, defaultCategory: string | nu
   if (modelConfig.value[field as keyof BikeInfrastructureModel]) {
     modelConfig.value[field as keyof BikeInfrastructureModel].defaultCategory = defaultCategory
   }
+}
+
+// Handle network data loaded from AboutComponent
+const handleNetworkDataLoaded = (data: GeoJsonData) => {
+  geojsonData.value = data
+  console.log('Map updated with new network data')
 }
 </script>
 
