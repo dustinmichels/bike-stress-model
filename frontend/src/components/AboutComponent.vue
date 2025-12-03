@@ -25,7 +25,7 @@
       <p class="has-text-grey"><strong>Created by:</strong> Dustin Michels</p>
       <p>
         <a
-          href="https://github.com/dustinmichels/advgis-finalproject"
+          href="https://github.com/dustinmichels/bike-stress-model"
           target="_blank"
           rel="noopener noreferrer"
           class="button is-small is-light"
