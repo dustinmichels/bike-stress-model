@@ -36,6 +36,7 @@
                     step="0.5"
                     v-model.number="category.score"
                     class="slider"
+                    :style="getSliderStyle(category.score)"
                     @input="onScoreChange(key, $event)"
                   />
                   <span class="score-value">{{ category.score.toFixed(1) }}</span>
@@ -78,13 +79,12 @@ const emit = defineEmits<{
   updateScore: [field: string, category: string, score: number]
 }>()
 
-// Color palette
+// Basic color palette
 const colors = {
-  primary: '#BD1872',
-  dark: '#232527',
-  light: '#D4DCFF',
-  accent: '#7D83FF',
-  info: '#007FFF',
+  primary: '#3273dc',
+  dark: '#363636',
+  light: '#f5f5f5',
+  border: '#dbdbdb',
 }
 
 // Local state for categories with scores
@@ -121,6 +121,29 @@ watch(
 // Helper function to format category names nicely
 const formatCategoryName = (key: string): string => {
   return key.replace(/_/g, ' ').replace(/-/g, ' ')
+}
+
+// Function to get color based on score (0 = green, 5 = red)
+const getScoreColor = (score: number): string => {
+  // Normalize score to 0-1 range
+  const normalized = score / 5
+
+  // Interpolate between green (0) and red (5)
+  // Green: rgb(34, 197, 94) - #22c55e
+  // Red: rgb(239, 68, 68) - #ef4444
+  const r = Math.round(34 + (239 - 34) * normalized)
+  const g = Math.round(197 + (68 - 197) * normalized)
+  const b = Math.round(94 + (68 - 94) * normalized)
+
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+// Function to get slider style with dynamic thumb color
+const getSliderStyle = (score: number) => {
+  const thumbColor = getScoreColor(score)
+  return {
+    '--thumb-color': thumbColor,
+  }
 }
 
 // Handle score changes
@@ -197,19 +220,19 @@ onUnmounted(() => {
 }
 
 .reset-button {
-  background-color: v-bind('colors.accent');
+  background-color: v-bind('colors.primary');
   color: white;
   border: none;
 }
 
 .reset-button:hover {
-  background-color: v-bind('colors.primary');
+  background-color: #2366d1;
   color: white;
 }
 
 /* Compact Table-Style Categories */
 .categories-table {
-  border: 1px solid #e5e7eb;
+  border: 1px solid v-bind('colors.border');
   border-radius: 6px;
   overflow: hidden;
 }
@@ -218,7 +241,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid v-bind('colors.border');
   background-color: white;
   transition: background-color 0.2s;
 }
@@ -228,7 +251,7 @@ onUnmounted(() => {
 }
 
 .category-row:hover {
-  background-color: #f9fafb;
+  background-color: v-bind('colors.light');
 }
 
 .category-left {
@@ -273,12 +296,7 @@ onUnmounted(() => {
   flex: 1;
   height: 6px;
   border-radius: 3px;
-  background: linear-gradient(
-    to right,
-    v-bind('colors.light') 0%,
-    v-bind('colors.accent') 50%,
-    v-bind('colors.info') 100%
-  );
+  background: linear-gradient(to right, #e5e7eb 0%, #9ca3af 50%, #6b7280 100%);
   outline: none;
   -webkit-appearance: none;
 }
@@ -289,7 +307,7 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: v-bind('colors.primary');
+  background: var(--thumb-color, v-bind('colors.primary'));
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -305,7 +323,7 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: v-bind('colors.primary');
+  background: var(--thumb-color, v-bind('colors.primary'));
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -319,20 +337,20 @@ onUnmounted(() => {
 
 .score-value {
   font-weight: 600;
-  color: v-bind('colors.primary');
+  color: v-bind('colors.dark');
   font-size: 1rem;
   min-width: 2.5rem;
   text-align: right;
 }
 
 .learn-more-button {
-  background-color: v-bind('colors.info');
-  border-color: v-bind('colors.info');
+  background-color: v-bind('colors.primary');
+  border-color: v-bind('colors.primary');
 }
 
 .learn-more-button:hover {
-  background-color: v-bind('colors.primary');
-  border-color: v-bind('colors.primary');
+  background-color: #2366d1;
+  border-color: #2366d1;
 }
 
 /* Ensure modal appears above map */
@@ -342,7 +360,7 @@ onUnmounted(() => {
 
 .modal-background {
   z-index: 99998 !important;
-  background-color: rgba(35, 37, 39, 0.7);
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 .modal-card {

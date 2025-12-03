@@ -38,7 +38,7 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
     defaultCategory: 'none',
     img: '',
     link: 'https://wiki.openstreetmap.org/wiki/Key:cycleway',
-    notes: 'Low = better, high = worse',
+    notes: '',
     categories: {
       separate: {
         score: 0,
