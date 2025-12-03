@@ -1,5 +1,11 @@
 # Adv GIS Final Project
 
+To run api:
+
+```sh
+uv run ./api
+```
+
 Clear notebooks:
 
 ```sh

@@ -1,6 +1,7 @@
 import json
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -8,6 +9,28 @@ from pydantic import BaseModel
 from main import OUTPUT_COLUMNS, prepare_data_for_place
 
 app = FastAPI(title="Bike Stress Network API")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://dustinmichels.github.io",  # Production URL
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[...],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    max_age=3600,  # Cache preflight for 1 hour
+)
 
 
 class NetworkRequest(BaseModel):
