@@ -6,6 +6,7 @@
 
 <script setup lang="ts">
 import type { BikeInfrastructureModel } from '@/types'
+import mermaid from 'mermaid'
 import { onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -71,11 +72,6 @@ const renderMermaid = async () => {
   if (!mermaidContainer.value) return
 
   try {
-    // Import mermaid dynamically
-    const mermaid = (
-      await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs')
-    ).default
-
     // Initialize mermaid
     mermaid.initialize({
       startOnLoad: false,
