@@ -54,11 +54,9 @@
 </template>
 
 <script setup lang="ts">
-import type { Ref } from 'vue'
-
 // Props
 interface Props {
-  cities: Ref<string[]>
+  cities: string[]
   currCity: string
 }
 
