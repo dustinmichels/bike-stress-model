@@ -98,13 +98,9 @@ const mapContainer = ref<HTMLElement | null>(null)
 const error = ref('')
 const loading = ref(false)
 
-// Boundary data
-const boundaryGeoJson = ref<any | null>(null)
-
 // Leaflet layers
 let map: L.Map | null = null
 let geojsonLayer: L.GeoJSON | null = null
-let boundaryLayer: L.GeoJSON | null = null
 
 /* ------------------------------------------------------------
   COLOR SCALE
@@ -248,8 +244,6 @@ onMounted(async () => {
         })
       }
     })
-
-    await loadBoundary()
   }
 })
 
@@ -257,37 +251,6 @@ onUnmounted(() => {
   map?.remove()
   map = null
 })
-
-/* ------------------------------------------------------------
-  BOUNDARY
------------------------------------------------------------- */
-const loadBoundary = async () => {
-  try {
-    const response = await fetch('/somerville_boundary.geojson')
-    if (!response.ok) return
-
-    const data = await response.json()
-    boundaryGeoJson.value = data
-    addBoundaryToMap(data)
-  } catch {}
-}
-
-const addBoundaryToMap = (geojsonData: any) => {
-  if (!map) return
-
-  if (boundaryLayer) map.removeLayer(boundaryLayer)
-
-  boundaryLayer = L.geoJSON(geojsonData, {
-    style: {
-      fillColor: '#001a33',
-      fillOpacity: 0.08,
-      color: '#ff1493',
-      weight: 4,
-      opacity: 0.7,
-      dashArray: '4 6',
-    },
-  }).addTo(map)
-}
 
 /* ------------------------------------------------------------
   GEOJSON RENDERING
