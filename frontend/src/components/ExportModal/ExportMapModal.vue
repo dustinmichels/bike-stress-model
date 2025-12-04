@@ -21,7 +21,12 @@
           </span>
           <span>Download GeoJSON</span>
         </button>
-        <button class="button is-primary" @click="exportDiagram">Save Diagram</button>
+        <button class="button is-primary" @click="exportDiagram">
+          <span class="icon">
+            <i class="fas fa-image"></i>
+          </span>
+          <span>Save Diagram as PNG</span>
+        </button>
       </footer>
     </div>
   </div>
@@ -48,28 +53,75 @@ const close = () => {
 
 const exportDiagram = () => {
   // Find the SVG element in the ModelFlowChart
-  const svg = document.querySelector('.mermaid-wrapper svg')
+  const svg = document.querySelector('.mermaid-wrapper svg') as SVGSVGElement
   if (!svg) {
     alert('No diagram to export')
     return
   }
 
+  // Get SVG dimensions
+  const bbox = svg.getBoundingClientRect()
+  const width = bbox.width
+  const height = bbox.height
+
   // Serialize the SVG
   const serializer = new XMLSerializer()
   const svgString = serializer.serializeToString(svg)
 
-  // Create a blob and download
-  const blob = new Blob([svgString], { type: 'image/svg+xml' })
-  const url = URL.createObjectURL(blob)
+  // Create a canvas element
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    alert('Failed to create canvas context')
+    return
+  }
 
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'bike-infrastructure-model.svg'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  // Set canvas size (with some scale for better quality)
+  const scale = 2
+  canvas.width = width * scale
+  canvas.height = height * scale
+  ctx.scale(scale, scale)
 
-  URL.revokeObjectURL(url)
+  // Create an image from SVG
+  const img = new Image()
+  const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+  const url = URL.createObjectURL(svgBlob)
+
+  img.onload = () => {
+    // Fill white background
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0, 0, width, height)
+
+    // Draw the SVG image onto the canvas
+    ctx.drawImage(img, 0, 0, width, height)
+
+    // Convert canvas to PNG blob
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        alert('Failed to create PNG')
+        return
+      }
+
+      // Download the PNG
+      const pngUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = pngUrl
+      link.download = 'bike-infrastructure-model.png'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      URL.revokeObjectURL(pngUrl)
+      URL.revokeObjectURL(url)
+    }, 'image/png')
+  }
+
+  img.onerror = () => {
+    alert('Failed to load diagram for export')
+    URL.revokeObjectURL(url)
+  }
+
+  img.src = url
 }
 
 const exportGeojson = () => {
@@ -128,5 +180,9 @@ onUnmounted(() => {
 .modal-card-body {
   max-height: 70vh;
   overflow-y: auto;
+}
+
+.modal-card-foot {
+  gap: 1.5rem;
 }
 </style>
