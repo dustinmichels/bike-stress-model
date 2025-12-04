@@ -13,7 +13,9 @@ PLACES = [
     "Somerville, Massachusetts, USA",
     "Cambridge, Massachusetts, USA",
     "Boston, Massachusetts, USA",
+    "Everett, Massachusetts, USA",
 ]
+
 
 # add cycleway to useful tags
 ox.settings.useful_tags_way = ox.settings.useful_tags_way + [
@@ -187,7 +189,6 @@ def main():
         # filter down to output columns
         edges = edges[OUTPUT_COLUMNS]
 
-        # add "_python" suffix to all computed score columns to differentiate from frontend
         score_columns = [
             "lanes_int_score",
             "maxspeed_int_score",
@@ -195,8 +196,12 @@ def main():
             "street_classification_score",
             "composite_score",
         ]
-        for col in score_columns:
-            edges.rename(columns={col: f"{col}_python"}, inplace=True)
+        # add "_python" suffix to all computed score columns to differentiate from frontend
+        # for col in score_columns:
+        #     edges.rename(columns={col: f"{col}_python"}, inplace=True)
+
+        # remove score cols
+        edges.drop(columns=score_columns, inplace=True)
 
         # save data
         save_data_for_place(place, OUT_PATH, nodes, edges)

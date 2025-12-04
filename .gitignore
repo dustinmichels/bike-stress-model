@@ -1,3 +1,5 @@
+*.qgz
+
 # in case they accidentally get created up here
 node_modules
 

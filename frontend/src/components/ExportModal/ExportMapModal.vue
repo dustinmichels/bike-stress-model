@@ -9,40 +9,33 @@
       <section class="modal-card-body">
         <div class="content">
           <h3 class="title is-5">Bike Infrastructure Scoring Model</h3>
-          <p class="subtitle is-6">
-            This flowchart shows how different infrastructure categories are weighted to calculate
-            the composite score.
-          </p>
 
           <!-- Mermaid Flowchart -->
           <ModelFlowChart v-if="modelConfig" :model-config="modelConfig" />
-
-          <div class="notification is-info is-light mt-4">
-            <p>
-              <strong>How to use this diagram:</strong><br />
-              • Each box shows a scoring category with its possible values<br />
-              • The arrows show how categories are weighted to create the composite score<br />
-              • Lower scores (closer to 0) indicate better bike infrastructure
-            </p>
-          </div>
         </div>
       </section>
       <footer class="modal-card-foot">
-        <button class="button" @click="close">Close</button>
-        <button class="button is-primary" @click="exportDiagram">Export Diagram</button>
+        <button class="button is-success" @click="exportGeojson">
+          <span class="icon">
+            <i class="fas fa-file-code"></i>
+          </span>
+          <span>Download GeoJSON</span>
+        </button>
+        <button class="button is-primary" @click="exportDiagram">Save Diagram</button>
       </footer>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { BikeInfrastructureModel } from '@/types'
+import type { BikeInfrastructureModel, GeoJsonData } from '@/types'
 import { onMounted, onUnmounted } from 'vue'
 import ModelFlowChart from './ModelFlowChart.vue'
 
 const props = defineProps<{
   isOpen: boolean
-  modelConfig?: BikeInfrastructureModel
+  modelConfig?: BikeInfrastructureModel | null
+  geojsonData?: GeoJsonData | null
 }>()
 
 const emit = defineEmits<{
@@ -77,6 +70,34 @@ const exportDiagram = () => {
   document.body.removeChild(link)
 
   URL.revokeObjectURL(url)
+}
+
+const exportGeojson = () => {
+  if (!props.geojsonData) {
+    alert('No GeoJSON data to export')
+    return
+  }
+
+  try {
+    // Convert GeoJSON object to formatted JSON string
+    const geojsonString = JSON.stringify(props.geojsonData, null, 2)
+
+    // Create a blob and download
+    const blob = new Blob([geojsonString], { type: 'application/geo+json' })
+    const url = URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'bike-infrastructure.geojson'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Error exporting GeoJSON:', error)
+    alert('Error exporting GeoJSON. Check console for details.')
+  }
 }
 
 const handleEscape = (event: KeyboardEvent) => {

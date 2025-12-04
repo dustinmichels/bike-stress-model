@@ -36,6 +36,7 @@
     <ExportMapModal
       :is-open="isExportModalOpen"
       :model-config="modelConfig"
+      :geojson-data="geojsonData"
       @close="isExportModalOpen = false"
     />
   </div>
