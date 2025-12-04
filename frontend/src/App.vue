@@ -46,10 +46,10 @@ import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
 import type { BikeInfrastructureModel, GeoJsonData, ModelWeights } from '@/types'
 import { onMounted, ref } from 'vue'
 import AboutComponent from './components/AboutComponent.vue'
-import ExportMap from './components/ExportMap.vue'
-import ExportMapModal from './components/ExportMapModal.vue'
+import ExportMap from './components/ExportButtons.vue'
+import ExportMapModal from './components/ExportModal/ExportMapModal.vue'
 import MapComponent from './components/Map/Map.vue'
-import ModelComponent from './components/ModelComponent.vue'
+import ModelComponent from './components/ModelSliders.vue'
 import SettingsModal from './components/SettingsModal.vue'
 
 // State
