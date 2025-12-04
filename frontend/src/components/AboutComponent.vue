@@ -17,8 +17,9 @@
     <div class="content">
       <p>
         This map shows a composite safety score for each segment of the cycling network in
-        {{ currCity }}, MA. The model is targeted towards the needs of children and other vulnerable
-        riders.
+        <span class="has-background-info-light px-2 py-1" style="border-radius: 4px"
+          >{{ currCity }}, MA</span
+        >. The model is targeted towards the needs of children and other vulnerable riders.
       </p>
 
       <p class="mb-4">The score takes into account:</p>
