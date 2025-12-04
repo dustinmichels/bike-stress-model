@@ -10,7 +10,7 @@
         />
       </div>
       <div class="column is-one-third right-column">
-        <AboutComponent />
+        <AboutComponent :cities="cities" v-model:currCity="currCity" />
         <ExportMap @open-modal="isExportModalOpen = true" />
       </div>
     </div>
@@ -45,13 +45,24 @@
 <script setup lang="ts">
 import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
 import type { BikeInfrastructureModel, GeoJsonData, ModelWeights } from '@/types'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import AboutComponent from './components/AboutComponent.vue'
 import ExportMap from './components/ExportButtons.vue'
 import ExportMapModal from './components/ExportModal/ExportMapModal.vue'
 import MapComponent from './components/Map/Map.vue'
 import ModelComponent from './components/ModelSliders.vue'
 import SettingsModal from './components/SettingsModal.vue'
+
+// Cities configuration
+const cities = ref<string[]>(['Somerville', 'Cambridge', 'Everett'])
+const currCity = ref<string>('Somerville')
+
+// City to geojson file mapping
+const cityFileMap: Record<string, string> = {
+  Somerville: 'somerville_streets.geojson',
+  Cambridge: 'cambridge_streets.geojson',
+  Everett: 'everett_streets.geojson',
+}
 
 // State
 const geojsonData = ref<GeoJsonData | null>(null)
@@ -63,16 +74,31 @@ const settingsDataField = ref<string | null>(null)
 const useGoodColors = ref(true)
 const isExportModalOpen = ref(false)
 
-// Load GeoJSON data on mount
-onMounted(async () => {
+// Load GeoJSON data for a specific city
+const loadGeoJsonForCity = async (city: string) => {
   try {
-    const response = await fetch(import.meta.env.BASE_URL + 'somerville_streets.geojson') // const response = await fetch('/cambridge_streets.geojson')
+    const fileName = cityFileMap[city]
+    if (!fileName) {
+      console.error(`No geojson file configured for city: ${city}`)
+      return
+    }
+    const response = await fetch(import.meta.env.BASE_URL + fileName)
     if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
     const data = await response.json()
     geojsonData.value = data
   } catch (e) {
-    console.error('Error loading GeoJSON:', e)
+    console.error(`Error loading GeoJSON for ${city}:`, e)
   }
+}
+
+// Load GeoJSON data on mount
+onMounted(() => {
+  loadGeoJsonForCity(currCity.value)
+})
+
+// Watch for city changes and reload geojson
+watch(currCity, (newCity) => {
+  loadGeoJsonForCity(newCity)
 })
 
 // Handle weight changes from ModelComponent

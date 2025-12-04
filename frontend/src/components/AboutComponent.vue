@@ -1,10 +1,23 @@
 <template>
   <div class="box about-component">
-    <h2 class="title is-4">Bike Safety Map - Somerville, MA</h2>
+    <!-- Title and City Selector -->
+    <div class="header-row">
+      <h2 class="title is-4">Bike Safety Map</h2>
+      <div class="field">
+        <div class="control">
+          <div class="select">
+            <select :value="currCity" @change="handleCityChange">
+              <option v-for="city in cities" :key="city" :value="city">{{ city }}, MA, USA</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="content">
       <p>
         This map shows a composite safety score for each segment of the cycling network in
-        Somerville, MA. The model is targeted towards the needs of children and other vulnerable
+        {{ currCity }}, MA. The model is targeted towards the needs of children and other vulnerable
         riders.
       </p>
 
@@ -41,7 +54,26 @@
 </template>
 
 <script setup lang="ts">
-// About component logic
+import type { Ref } from 'vue'
+
+// Props
+interface Props {
+  cities: Ref<string[]>
+  currCity: string
+}
+
+const props = defineProps<Props>()
+
+// Emits
+const emit = defineEmits<{
+  'update:currCity': [value: string]
+}>()
+
+// Handle city change
+const handleCityChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  emit('update:currCity', target.value)
+}
 </script>
 
 <style scoped>
@@ -52,8 +84,19 @@
   flex-direction: column;
 }
 
-.title {
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.title {
+  margin-bottom: 0;
+}
+
+.header-row .field {
+  margin-bottom: 0;
 }
 
 .content {
