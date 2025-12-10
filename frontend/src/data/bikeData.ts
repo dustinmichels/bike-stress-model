@@ -15,20 +15,7 @@ import type { BikeInfrastructureModel } from '@/types'
  * 1. Read these fields from your GeoJSON
  * 2. Look up the score for each category in this model
  * 3. Calculate a weighted composite score based on the model weights
- *
- * DEFAULT VALUES:
- * When a GeoJSON feature is missing a required field, these defaults are used:
- * - separation_level: "none"
- * - street_classification: "residential"
- * - maxspeed_int: 25
  */
-
-// Default categories to use when GeoJSON is missing data
-export const DEFAULT_CATEGORIES = {
-  separation_level: 'none',
-  street_classification: 'residential',
-  maxspeed_int: 25,
-}
 
 export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
   // 1️⃣ Separation Level (60%)
@@ -53,32 +40,32 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
         notes: 'Physically separated bike track (protected bike lane)',
       },
       lane_buffered: {
-        score: 2,
+        score: 1.5,
         displayLabel: 'Buffered Bike Lane',
         img: '',
         notes:
           'Could be a painted buffer or physical buffer (e.g., bollards) separating bike lane from traffic. In the data, sometimes used interchangeably with "track".',
       },
       lane: {
-        score: 3,
+        score: 2.5,
         displayLabel: 'Painted Bike Lane',
         img: '',
         notes: 'Dedicated bike lane painted on the road, not physically separated from traffic',
       },
       share_busway: {
-        score: 4,
+        score: 3,
         displayLabel: 'Shared Bus Lane',
         img: '',
         notes: 'Cyclists share a dedicated lane with buses',
       },
       shared_lane: {
-        score: 4.5,
+        score: 3.5,
         displayLabel: 'Shared Lane',
         img: '',
         notes: 'Cyclists share a lane with motor vehicle traffic (sharrows, marked shared lanes)',
       },
       none: {
-        score: 5,
+        score: 4,
         displayLabel: 'No Separation',
         img: '',
         notes: 'No separation & probably no markings',
@@ -109,12 +96,12 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
         notes: 'Low-traffic residential streets with minimal through traffic',
       },
       'medium-capacity': {
-        score: 4,
+        score: 3,
         displayLabel: 'Medium-Capacity Road',
         notes: 'Arterial roads or collectors with moderate to high traffic volumes',
       },
       motorway: {
-        score: 5,
+        score: 4,
         displayLabel: 'Motorway',
         notes: 'High-speed highways or motorways (generally prohibited for cyclists)',
       },
@@ -148,19 +135,19 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
         notes: '',
       },
       '40_mph': {
-        score: 4,
+        score: 3.5,
         displayLabel: '40 mph',
         img: '',
         notes: '',
       },
       '50_mph': {
-        score: 4.5,
+        score: 4,
         displayLabel: '50 mph',
         img: '',
         notes: '',
       },
       over_50_mph: {
-        score: 5,
+        score: 4,
         displayLabel: '> 50 mph',
         img: '',
         notes: '',
