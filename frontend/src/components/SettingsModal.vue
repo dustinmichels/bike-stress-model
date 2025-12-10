@@ -32,7 +32,7 @@
                   <input
                     type="range"
                     min="0"
-                    max="5"
+                    max="4"
                     step="0.5"
                     v-model.number="category.score"
                     class="slider"
@@ -123,12 +123,12 @@ const formatCategoryName = (key: string): string => {
   return key.replace(/_/g, ' ').replace(/-/g, ' ')
 }
 
-// Function to get color based on score (0 = green, 5 = red)
+// Function to get color based on score (0 = green, 4 = red)
 const getScoreColor = (score: number): string => {
   // Normalize score to 0-1 range
-  const normalized = score / 5
+  const normalized = score / 4
 
-  // Interpolate between green (0) and red (5)
+  // Interpolate between green (0) and red (4)
   // Green: rgb(34, 197, 94) - #22c55e
   // Red: rgb(239, 68, 68) - #ef4444
   const r = Math.round(34 + (239 - 34) * normalized)

@@ -129,7 +129,7 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
         notes: '',
       },
       '30_mph': {
-        score: 3,
+        score: 2.5,
         displayLabel: '30 mph',
         img: '',
         notes: '',
