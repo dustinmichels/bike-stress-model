@@ -8,11 +8,11 @@ import pandas as pd
 RANKING = {
     "separate": 0,  # totally separated
     "track": 1,  # totally separated (but sometimes used for lane with buffer)
-    "lane_buffered": 2,  # Added buffered lane type
-    "lane": 3,  # dedicated bike lane, not separate
-    "share_busway": 4,  # shared with bus
-    "shared_lane": 4.5,  # in traffic
-    "none": 5,  # no cycling infrastructure
+    "lane_buffered": 1.5,  # Added buffered lane type
+    "lane": 2.5,  # dedicated bike lane, not separate
+    "share_busway": 3,  # shared with bus
+    "shared_lane": 3.5,  # in traffic
+    "none": 4,  # no cycling infrastructure
 }
 
 

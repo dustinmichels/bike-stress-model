@@ -9,8 +9,8 @@ LANES_RANKINGS = [
     (2, 0),  # 1-2 lanes -> 0 points
     (3, 2),  # 3 lanes -> 2 points
     (4, 3),  # 4 lanes -> 3 points
-    (5, 4),  # 5 lanes -> 4 points
-    (float("inf"), 5),  # 6+ lanes -> 5 point
+    (5, 3.5),  # 5 lanes -> 3.5 points
+    (float("inf"), 4),  # 6+ lanes -> 4 points
 ]
 
 DEFAULT_LANES = None  # Global default for missing lane values

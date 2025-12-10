@@ -39,8 +39,8 @@ STREET_CLASSIFICATIONS = {
 CLASSIFICATION_SCORES = {
     "dedicated_path": 0,
     "residential": 2,
-    "medium-capacity": 4,
-    "motorway": 5,
+    "medium-capacity": 3,
+    "motorway": 4,
 }
 
 # Default classification for unknown types

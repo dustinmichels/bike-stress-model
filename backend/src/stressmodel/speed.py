@@ -9,11 +9,11 @@ DEFAULT_SPEED_LIMIT = None  # Global default speed limit in mph
 
 SPEED_RANKINGS = [
     (20, 0),  # <= 20 mph -> 0 points
-    (25, 2),  #
-    (30, 3),  #
-    (40, 4),  #
-    (50, 4.5),  #
-    (float("inf"), 5),  # > 50 mph -> 5 points
+    (25, 1),  #
+    (30, 2.5),  #
+    (40, 3),  #
+    (50, 3.5),  #
+    (float("inf"), 4),  # > 50 mph -> 5 points
 ]
 
 

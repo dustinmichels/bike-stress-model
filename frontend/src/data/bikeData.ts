@@ -135,13 +135,13 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
         notes: '',
       },
       '40_mph': {
-        score: 3.5,
+        score: 3,
         displayLabel: '40 mph',
         img: '',
         notes: '',
       },
       '50_mph': {
-        score: 4,
+        score: 3.5,
         displayLabel: '50 mph',
         img: '',
         notes: '',
