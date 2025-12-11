@@ -131,7 +131,9 @@ def compute_routes_from_census_blocks_to_school(
             route_gdf = gpd.GeoDataFrame()
 
         if not route_gdf.empty:
-            route_gdf["from_block_id"] = row["GEOID20"]
+            route_gdf["from_block_geoid"] = row["GEOID20"]
+            route_gdf["from_blkgrp20"] = row["BLKGRP20"]
+            route_gdf["from_tract20"] = row["TRACT20"]
             route_gdf["to_school_name"] = school["Name"]
             route_gdf["to_school_id"] = school["GlobalID"]
             dataframes.append(route_gdf)
