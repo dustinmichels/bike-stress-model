@@ -7,7 +7,7 @@ import pandas as pd
 import src.stressmodel as sm
 from util import extract_width, first_if_list
 
-OUT_PATH = "data/out"
+OUT_PATH = "data/out/main"
 
 PLACES = [
     "Somerville, Massachusetts, USA",
@@ -181,7 +181,7 @@ def save_data_for_place(place: str, out_path: str, nodes, edges):
 
 def main():
     # delete contents of data/out directory
-    print("> Clearing data/out")
+    print("> Clearing data/out/main")
     if os.path.exists(OUT_PATH):
         shutil.rmtree(OUT_PATH)
     os.makedirs(OUT_PATH, exist_ok=True)

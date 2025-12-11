@@ -23,6 +23,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "rapidfuzz" },
     { name = "scikit-learn" },
+    { name = "tqdm" },
     { name = "uvicorn" },
 ]
 
@@ -48,6 +49,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=22.0.0" },
     { name = "rapidfuzz", specifier = ">=3.14.3" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
+    { name = "tqdm", specifier = ">=4.67.1" },
     { name = "uvicorn", specifier = ">=0.38.0" },
 ]
 
