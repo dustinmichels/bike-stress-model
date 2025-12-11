@@ -3,16 +3,20 @@ name = "advgis-finalproject"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "duckdb>=1.4.2",
     "fastapi>=0.123.5",
+    "fiona>=1.10.1",
     "geopandas>=1.1.1",
     "kagglehub>=0.3.13",
+    "lonboard>=0.13.0",
     "matplotlib>=3.10.7",
     "osmnx>=2.0.6",
     "pandas>=2.3.3",
+    "pyarrow>=22.0.0",
     "rapidfuzz>=3.14.3",
+    "scikit-learn>=1.8.0",
     "uvicorn>=0.38.0",
 ]
 
@@ -20,6 +24,6 @@ dependencies = [
 dev = [
     "jupyterlab>=4.5.0",
     "pandas-stubs>=2.3.2.250926",
- "pytest>=9.0.1",
- "pytest-mock>=3.15.1",
+    "pytest>=9.0.1",
+    "pytest-mock>=3.15.1",
 ]

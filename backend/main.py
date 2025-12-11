@@ -12,7 +12,6 @@ OUT_PATH = "data/out"
 PLACES = [
     "Somerville, Massachusetts, USA",
     "Cambridge, Massachusetts, USA",
-    "Boston, Massachusetts, USA",
     "Everett, Massachusetts, USA",
 ]
 
@@ -40,10 +39,6 @@ ox.settings.useful_tags_way = ox.settings.useful_tags_way + [
 
 OUTPUT_COLUMNS = [
     "name",
-    # --- lanes ---
-    "lanes_0",
-    "lanes_int",
-    "lanes_int_score",
     # --- maxspeed ---
     "maxspeed_0",
     "maxspeed_int",
@@ -86,8 +81,8 @@ def process_network(edges: pd.DataFrame) -> pd.DataFrame:
         ["ref", "service", "access", "bridge", "tunnel", "junction"], axis=1
     )
 
-    # if "name" is null, drop the row
-    edges = edges[edges["name"].notnull()]
+    # if "name" is null, drop the row (gets rid of tiny dead ends)
+    # edges = edges[edges["name"].notnull()]
 
     # parse width
     edges["width_float"] = edges["width"].apply(extract_width).astype("Float64")
@@ -142,15 +137,28 @@ def prepare_data_for_place(place: str):
     # compute composite score
     print(f"> MODEL: Preparing composite score for {place}")
 
-    scores = [
-        "maxspeed_int_score",
-        "separation_level_score",
-        "street_classification_score",
-        "lanes_int_score",
-    ]
-    edges["composite_score"] = edges[scores].sum(axis=1) / len(scores)
+    edges["composite_score"] = compute_composite_score(edges)
 
     return nodes, edges
+
+
+def compute_composite_score(edges: pd.DataFrame) -> pd.Series:
+    weights = pd.Series(
+        {
+            "separation_level_score": 0.60,
+            "maxspeed_int_score": 0.20,
+            "street_classification_score": 0.20,
+        }
+    )
+
+    # Compute weighted sum using dot, ignoring NaNs
+    weighted_sum = edges[weights.index].fillna(0).dot(weights)
+
+    # Compute sum of weights for non-missing values
+    sum_weights = edges[weights.index].notna().dot(weights)
+
+    # Normalize
+    return weighted_sum / sum_weights
 
 
 def save_data_for_place(place: str, out_path: str, nodes, edges):
@@ -188,20 +196,6 @@ def main():
 
         # filter down to output columns
         edges = edges[OUTPUT_COLUMNS]
-
-        score_columns = [
-            "lanes_int_score",
-            "maxspeed_int_score",
-            "separation_level_score",
-            "street_classification_score",
-            "composite_score",
-        ]
-        # add "_python" suffix to all computed score columns to differentiate from frontend
-        # for col in score_columns:
-        #     edges.rename(columns={col: f"{col}_python"}, inplace=True)
-
-        # remove score cols
-        edges.drop(columns=score_columns, inplace=True)
 
         # save data
         save_data_for_place(place, OUT_PATH, nodes, edges)
