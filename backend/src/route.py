@@ -17,6 +17,8 @@ def get_route_gdf(G, start_coord, end_coord):
     - GeoDataFrame with columns: ['type', 'geometry', 'composite_score']
     """
 
+    use_crs = G.graph["crs"] if "crs" in G.graph else "EPSG:4326"
+
     # --- 1. Convert start/end to x, y ---
     if isinstance(start_coord, Point):
         start_x, start_y = start_coord.x, start_coord.y
@@ -31,6 +33,9 @@ def get_route_gdf(G, start_coord, end_coord):
     # --- 2. Nearest nodes ---
     orig = ox.nearest_nodes(G, X=start_x, Y=start_y)
     dest = ox.nearest_nodes(G, X=end_x, Y=end_y)
+
+    # Print the node ID
+    # print(f"Nearest node ID: {orig}")
 
     # --- 3. Shortest path ---
     route = ox.shortest_path(G, orig, dest, weight="composite_score")
@@ -58,19 +63,15 @@ def get_route_gdf(G, start_coord, end_coord):
     avg_score = sum(edge_scores) / len(edge_scores) if edge_scores else None
 
     # --- 5. Create geometries ---
-    start_geom = Point(start_x, start_y)
-    end_geom = Point(end_x, end_y)
     route_coords = [(G.nodes[n]["x"], G.nodes[n]["y"]) for n in route]
     route_geom = LineString(route_coords)
 
     # --- 6. Create GeoDataFrame ---
     gdf = gpd.GeoDataFrame(
         [
-            {"type": "start", "geometry": start_geom, "composite_score": None},
-            {"type": "end", "geometry": end_geom, "composite_score": None},
-            {"type": "route", "geometry": route_geom, "composite_score": avg_score},
+            {"geometry": route_geom, "composite_score": avg_score},
         ],
-        crs="EPSG:4326",
+        crs=use_crs,
     )
 
     return gdf
