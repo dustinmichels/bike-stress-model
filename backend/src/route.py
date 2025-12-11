@@ -9,7 +9,7 @@ from tqdm import tqdm
 def get_route_gdf(G, start_coord, end_coord, weight="composite_score"):
     """
     Compute a route between two points on a graph G, using the specified weight.
-    Returns a GeoDataFrame with route geometry and average weight value.
+    Returns a GeoDataFrame with route geometry and statistics.
 
     Parameters:
     - G: networkx graph (OSMnx graph)
@@ -19,7 +19,9 @@ def get_route_gdf(G, start_coord, end_coord, weight="composite_score"):
               Common options: "composite_score", "length"
 
     Returns:
-    - GeoDataFrame with columns: ['type', 'geometry', weight column name]
+    - GeoDataFrame with columns: ['geometry', 'mean_composite_score',
+      'median_composite_score', 'min_composite_score', 'max_composite_score',
+      'sum_length']
     """
 
     use_crs = G.graph["crs"] if "crs" in G.graph else "EPSG:4326"
@@ -45,28 +47,49 @@ def get_route_gdf(G, start_coord, end_coord, weight="composite_score"):
     if route is None:
         raise ValueError("No route found between start and end")
 
-    # --- 4. Extract edge weights ---
+    # --- 4. Extract edge data ---
     route_edges = list(zip(route[:-1], route[1:]))
-    edge_weights = []
+    composite_scores = []
+    lengths = []
 
     for u, v in route_edges:
         data = G.get_edge_data(u, v)
         if data is not None:
             edge = list(data.values())[0]
-            edge_weights.append(edge.get(weight, 0))
+            composite_scores.append(edge.get("composite_score", 0))
+            lengths.append(edge.get("length", 0))
         else:
-            edge_weights.append(0)
+            composite_scores.append(0)
+            lengths.append(0)
 
-    avg_weight = sum(edge_weights) / len(edge_weights) if edge_weights else None
+    # --- 5. Calculate statistics ---
+    mean_composite = (
+        sum(composite_scores) / len(composite_scores) if composite_scores else None
+    )
+    median_composite = (
+        sorted(composite_scores)[len(composite_scores) // 2]
+        if composite_scores
+        else None
+    )
+    min_composite = min(composite_scores) if composite_scores else None
+    max_composite = max(composite_scores) if composite_scores else None
+    sum_length = sum(lengths)
 
-    # --- 5. Create geometries ---
+    # --- 6. Create geometries ---
     route_coords = [(G.nodes[n]["x"], G.nodes[n]["y"]) for n in route]
     route_geom = LineString(route_coords)
 
-    # --- 6. Create GeoDataFrame ---
+    # --- 7. Create GeoDataFrame ---
     gdf = gpd.GeoDataFrame(
         [
-            {"geometry": route_geom, weight: avg_weight},
+            {
+                "geometry": route_geom,
+                "mean_composite_score": mean_composite,
+                "median_composite_score": median_composite,
+                "min_composite_score": min_composite,
+                "max_composite_score": max_composite,
+                "sum_length": sum_length,
+            },
         ],
         crs=use_crs,
     )
@@ -117,3 +140,57 @@ def compute_routes_from_census_blocks_to_school(
         pd.concat(dataframes, ignore_index=True), crs=use_crs
     )
     return combined_gdf, errors
+
+
+def compute_routes_from_census_blocks_to_all_schools(
+    G: nx.classes.multidigraph.MultiDiGraph,
+    somerville_census_blocks: gpd.GeoDataFrame,
+    schools_gdf: gpd.GeoDataFrame,
+    weight="composite_score",
+):
+    """
+    Compute routes from census blocks to all schools and aggregate results.
+
+    Parameters
+    ----------
+    schools_gdf : GeoDataFrame
+        GeoDataFrame containing school locations and attributes
+    G : networkx.classes.multidigraph.MultiDiGraph
+        Street network graph
+    somerville_census_blocks : GeoDataFrame
+        Census blocks to route from
+    weight : str, optional
+        Edge weight to use for routing. Must be "composite_score" or "length".
+        Default is "composite_score".
+
+    Returns
+    -------
+    all_routes_gdf : GeoDataFrame
+        Aggregated GeoDataFrame of all routes from census blocks to schools
+    errors : list
+        List of error messages encountered during routing
+    """
+    if weight not in ["composite_score", "length"]:
+        raise ValueError("weight must be 'composite_score' or 'length'")
+
+    all_routes = []  # accumulate all GeoDataFrames
+
+    for i, school in schools_gdf.iterrows():
+        print(f"----- {school['Name']} -----")
+
+        combined_gdf, errors = compute_routes_from_census_blocks_to_school(
+            G, somerville_census_blocks, school, weight=weight
+        )
+
+        # add school name column
+        combined_gdf = combined_gdf.assign(school_name=school["Name"])
+
+        # collect for global merge
+        all_routes.append(combined_gdf)
+
+    # merge all routes into one GeoDataFrame
+    all_routes_gdf = gpd.GeoDataFrame(
+        pd.concat(all_routes, ignore_index=True), crs=all_routes[0].crs
+    )
+
+    return all_routes_gdf, errors

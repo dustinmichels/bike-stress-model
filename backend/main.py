@@ -53,6 +53,7 @@ OUTPUT_COLUMNS = [
     # --- composite ---
     "composite_score",
     # --- basics ---
+    "length",
     "width_float",
     "width_half",
     "geometry",
