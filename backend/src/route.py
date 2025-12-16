@@ -19,9 +19,28 @@ def get_route_gdf(G, start_coord, end_coord, weight="composite_score"):
               Common options: "composite_score", "length"
 
     Returns:
-    - GeoDataFrame with columns: ['geometry', 'mean_composite_score',
-      'median_composite_score', 'min_composite_score', 'max_composite_score',
-      'sum_length']
+    - GeoDataFrame with columns: ['geometry', 'weighted_mean_score',
+      'min_score', 'max_score', 'sum_length']
+
+    Weighted Mean Calculation:
+    -------------------------
+    The weighted_mean_score is calculated using segment lengths as weights:
+
+        weighted_mean = Σ(score_i x length_i) / Σ(length_i)
+
+    This ensures that longer segments contribute proportionally more to the
+    overall route score than shorter segments. For example:
+
+    - Segment 1: score=9.0, length=10m  → contributes 90 to numerator
+    - Segment 2: score=3.0, length=100m → contributes 300 to numerator
+    - Total length: 110m
+    - Weighted mean: (90 + 300) / 110 = 3.55
+
+    Compare to simple mean: (9.0 + 3.0) / 2 = 6.0
+
+    The weighted mean (3.55) better represents the actual experience of
+    traveling this route, since you spend most of your distance (100m out
+    of 110m) on the segment with score 3.0.
     """
 
     use_crs = G.graph["crs"] if "crs" in G.graph else "EPSG:4326"
@@ -63,17 +82,20 @@ def get_route_gdf(G, start_coord, end_coord, weight="composite_score"):
             lengths.append(0)
 
     # --- 5. Calculate statistics ---
-    mean_composite = (
-        sum(composite_scores) / len(composite_scores) if composite_scores else None
-    )
-    median_composite = (
-        sorted(composite_scores)[len(composite_scores) // 2]
-        if composite_scores
+    sum_length = sum(lengths)
+
+    # Weighted mean: each segment's score is weighted by its length
+    # This gives a distance-weighted average that reflects the actual
+    # experience of traveling the route
+    weighted_mean_score = (
+        sum(score * length for score, length in zip(composite_scores, lengths))
+        / sum_length
+        if sum_length > 0
         else None
     )
-    min_composite = min(composite_scores) if composite_scores else None
-    max_composite = max(composite_scores) if composite_scores else None
-    sum_length = sum(lengths)
+
+    min_score = min(composite_scores) if composite_scores else None
+    max_score = max(composite_scores) if composite_scores else None
 
     # --- 6. Create geometries ---
     route_coords = [(G.nodes[n]["x"], G.nodes[n]["y"]) for n in route]
@@ -84,10 +106,9 @@ def get_route_gdf(G, start_coord, end_coord, weight="composite_score"):
         [
             {
                 "geometry": route_geom,
-                "mean_composite_score": mean_composite,
-                "median_composite_score": median_composite,
-                "min_composite_score": min_composite,
-                "max_composite_score": max_composite,
+                "weighted_mean_score": weighted_mean_score,
+                "min_score": min_score,
+                "max_score": max_score,
                 "sum_length": sum_length,
             },
         ],
