@@ -149,6 +149,6 @@ const handleUpdateScore = (field: string, category: string, score: number) => {
 
 .right-column {
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 </style>

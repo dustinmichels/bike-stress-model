@@ -36,20 +36,38 @@
 
       <hr class="my-5" />
 
-      <p class="has-text-grey"><strong>Created by:</strong> Dustin Michels</p>
-      <p>
-        <a
-          href="https://github.com/dustinmichels/bike-stress-model"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="button is-small is-light"
-        >
-          <span class="icon">
-            <i class="fab fa-github"></i>
-          </span>
-          <span>View on GitHub</span>
-        </a>
-      </p>
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div class="level-item">
+            <div class="created-by">
+              <span class="has-text-grey-light">Created by</span>
+              <a
+                href="https://dustinmichels.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="has-text-link"
+              >
+                Dustin Michels
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="level-right">
+          <div class="level-item">
+            <a
+              href="https://github.com/dustinmichels/bike-stress-model"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="button is-small is-light"
+            >
+              <span class="icon">
+                <i class="fab fa-github"></i>
+              </span>
+              <span>View on GitHub</span>
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -100,5 +118,20 @@ const handleCityChange = (event: Event) => {
 
 .content {
   flex: 1;
+}
+
+.created-by {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.created-by a {
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.created-by a:hover {
+  text-decoration: underline;
 }
 </style>
