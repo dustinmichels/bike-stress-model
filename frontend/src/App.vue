@@ -1,7 +1,7 @@
 <template>
   <div class="container is-fluid main-container">
-    <div class="columns top-row">
-      <div class="column is-two-thirds">
+    <div class="columns is-multiline top-row">
+      <div class="column is-two-thirds-tablet is-full-mobile map-column">
         <MapComponent
           :geojson-data="geojsonData"
           :model-config="modelConfig"
@@ -9,7 +9,7 @@
           @toggle-colors="useGoodColors = !useGoodColors"
         />
       </div>
-      <div class="column is-one-third right-column">
+      <div class="column is-one-third-tablet is-full-mobile right-column">
         <AboutComponent :cities="cities" v-model:currCity="currCity" />
         <ExportMap @open-modal="isExportModalOpen = true" />
       </div>
@@ -130,6 +130,7 @@ const handleUpdateScore = (field: string, category: string, score: number) => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow: auto;
 }
 
 .top-row {
@@ -150,5 +151,46 @@ const handleUpdateScore = (field: string, category: string, score: number) => {
 .right-column {
   flex-direction: column;
   gap: 0.25rem;
+}
+
+/* Mobile-specific styles */
+@media screen and (max-width: 768px) {
+  .main-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .top-row {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bottom-row {
+    flex: none;
+  }
+
+  .map-column {
+    min-height: 50vh;
+    max-height: 50vh;
+    order: 1;
+  }
+
+  .right-column {
+    order: 2;
+    height: auto;
+  }
+
+  .column {
+    height: auto;
+  }
+}
+
+/* Tablet adjustments */
+@media screen and (min-width: 769px) and (max-width: 1023px) {
+  .map-column {
+    min-height: 60vh;
+  }
 }
 </style>

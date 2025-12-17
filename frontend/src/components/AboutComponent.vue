@@ -134,4 +134,43 @@ const handleCityChange = (event: Event) => {
 .created-by a:hover {
   text-decoration: underline;
 }
+
+/* Mobile responsiveness */
+@media screen and (max-width: 768px) {
+  .header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .header-row .field {
+    width: 100%;
+  }
+
+  .header-row .select {
+    width: 100%;
+  }
+
+  .header-row .select select {
+    width: 100%;
+    font-size: 0.9rem;
+  }
+
+  .about-component {
+    height: auto;
+  }
+
+  .content {
+    font-size: 0.9rem;
+  }
+
+  .created-by {
+    font-size: 0.85rem;
+  }
+}
 </style>

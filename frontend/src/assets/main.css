@@ -14,3 +14,18 @@ body {
 #app {
   height: 100%;
 }
+
+/* Mobile responsiveness - allow scrolling */
+@media screen and (max-width: 768px) {
+  html,
+  body {
+    height: auto;
+    min-height: 100%;
+    overflow: auto;
+  }
+
+  #app {
+    height: auto;
+    min-height: 100%;
+  }
+}

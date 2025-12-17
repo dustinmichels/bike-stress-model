@@ -22,7 +22,10 @@
               <line x1="12" y1="8" x2="12.01" y2="8"></line>
             </svg>
           </span>
-          <span>Drag the sliders to adjust the weights for each factor.</span>
+          <span
+            >Drag the sliders to adjust the weights for each factor. Use the "eye" icon to toggle
+            visibility. Use the "settings" icon to adjust the classifications.</span
+          >
         </span>
       </div>
     </div>
@@ -101,6 +104,7 @@
             class="handle"
             :style="{ left: getCumulativeWidth(index) + '%' }"
             @mousedown="startDrag(index, $event)"
+            @touchstart="startDrag(index, $event)"
           >
             <div class="handle-grip">
               <div class="grip-line"></div>
@@ -230,16 +234,24 @@ const openSettings = (index: number) => {
   }
 }
 
-const startDrag = (index: number, event: MouseEvent) => {
+const startDrag = (index: number, event: MouseEvent | TouchEvent) => {
   event.preventDefault()
   draggingIndex.value = index
 }
 
-const handleMouseMove = (event: MouseEvent) => {
+const getClientX = (event: MouseEvent | TouchEvent): number => {
+  if ('touches' in event) {
+    return event.touches[0]?.clientX ?? 0
+  }
+  return event.clientX
+}
+
+const handleMouseMove = (event: MouseEvent | TouchEvent) => {
   if (draggingIndex.value === null || !barRef.value) return
 
   const rect = barRef.value.getBoundingClientRect()
-  const mouseX = event.clientX - rect.left
+  const clientX = getClientX(event)
+  const mouseX = clientX - rect.left
   const percentage = Math.max(0, Math.min(100, (mouseX / rect.width) * 100))
 
   const index = draggingIndex.value
@@ -275,6 +287,8 @@ const handleMouseUp = () => {
 onMounted(() => {
   document.addEventListener('mousemove', handleMouseMove)
   document.addEventListener('mouseup', handleMouseUp)
+  document.addEventListener('touchmove', handleMouseMove)
+  document.addEventListener('touchend', handleMouseUp)
 
   // Emit initial weights on mount
   emitWeightChanges()
@@ -283,6 +297,8 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('mouseup', handleMouseUp)
+  document.removeEventListener('touchmove', handleMouseMove)
+  document.removeEventListener('touchend', handleMouseUp)
 })
 </script>
 
@@ -479,5 +495,68 @@ onUnmounted(() => {
   height: 2px;
   background-color: #666;
   border-radius: 1px;
+}
+
+/* Mobile responsiveness */
+@media screen and (max-width: 768px) {
+  .header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .instruction-highlight {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .calibration-bar {
+    height: 80px;
+  }
+
+  .handles {
+    height: 80px;
+  }
+
+  .handle {
+    height: 100px;
+    width: 40px;
+  }
+
+  .handle-grip {
+    width: 28px;
+    height: 56px;
+  }
+
+  .segment-label {
+    font-size: 0.75rem;
+  }
+
+  .segment-icons {
+    gap: 0.25rem;
+  }
+
+  .icon-button {
+    padding: 0.15rem;
+  }
+
+  .model-component {
+    height: auto;
+  }
+}
+
+/* Tablet adjustments */
+@media screen and (min-width: 769px) and (max-width: 1023px) {
+  .instruction-highlight {
+    font-size: 0.9rem;
+  }
+
+  .segment-label {
+    font-size: 0.85rem;
+  }
 }
 </style>

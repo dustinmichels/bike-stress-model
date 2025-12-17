@@ -38,4 +38,11 @@ const openModal = () => {
   align-items: stretch;
   justify-content: center;
 }
+
+@media screen and (max-width: 768px) {
+  .export-map-container {
+    height: auto;
+    min-height: auto;
+  }
+}
 </style>
