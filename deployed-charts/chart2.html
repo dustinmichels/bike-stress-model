@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      #vis.vega-embed {
+        width: 100%;
+        display: flex;
+      }
+
+      #vis.vega-embed details,
+      #vis.vega-embed details summary {
+        position: relative;
+      }
+    </style>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/vega@6"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/vega-lite@6.1.0"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/vega-embed@7"
+    ></script>
+  </head>
+  <body>
+    <div id="vis"></div>
+    <script>
+      (function (vegaEmbed) {
+        var spec = {
+          config: { view: { continuousWidth: 300, continuousHeight: 300 } },
+          layer: [
+            {
+              data: { name: "data-ae99f721d4d96f002b4e4c0ad95d36e6" },
+              mark: { type: "bar" },
+              encoding: {
+                color: {
+                  field: "method",
+                  scale: { scheme: "set2" },
+                  title: "Method",
+                  type: "nominal",
+                },
+                tooltip: [
+                  {
+                    field: "from_block_geoid",
+                    title: "Block",
+                    type: "nominal",
+                  },
+                  { field: "method", title: "Method", type: "nominal" },
+                  {
+                    field: "weighted_mean_score",
+                    format: ".3f",
+                    title: "Weighted Mean Score",
+                    type: "quantitative",
+                  },
+                  {
+                    field: "sum_length",
+                    format: ".1f",
+                    title: "Total Length",
+                    type: "quantitative",
+                  },
+                ],
+                x: {
+                  axis: { labelAngle: -45 },
+                  field: "from_block_geoid",
+                  sort: {
+                    field: "mean_score_diff",
+                    op: "max",
+                    order: "descending",
+                  },
+                  title: "Block",
+                  type: "nominal",
+                },
+                xOffset: { field: "method", type: "nominal" },
+                y: {
+                  field: "weighted_mean_score",
+                  title: "Weighted Mean Score",
+                  type: "quantitative",
+                },
+              },
+              title:
+                "Mean Composite Score by Block and Method (Risk vs. Length)",
+            },
+            {
+              data: { name: "data-e97e952a63d5e815ea822eb400a85f38" },
+              mark: {
+                type: "text",
+                align: "center",
+                baseline: "bottom",
+                dy: -5,
+                fontSize: 10,
+                fontWeight: "bold",
+              },
+              encoding: {
+                text: {
+                  field: "mean_score_diff",
+                  format: ".3f",
+                  type: "quantitative",
+                },
+                x: {
+                  field: "from_block_geoid",
+                  sort: {
+                    field: "mean_score_diff",
+                    op: "max",
+                    order: "descending",
+                  },
+                  type: "nominal",
+                },
+                y: { field: "weighted_mean_score", type: "quantitative" },
+              },
+            },
+            {
+              data: { name: "data-0b038d98d2d830213a9da65ef15840a2" },
+              mark: {
+                type: "rule",
+                color: "gray",
+                strokeDash: [5, 5],
+                strokeWidth: 2,
+              },
+              encoding: {
+                x: { value: 300 },
+                y: { value: 0 },
+                y2: { value: 400 },
+              },
+            },
+          ],
+          height: 400,
+          width: 600,
+          $schema: "https://vega.github.io/schema/vega-lite/v6.1.0.json",
+          datasets: {
+            "data-ae99f721d4d96f002b4e4c0ad95d36e6": [
+              {
+                from_block_geoid: "250173502022002",
+                method: "length",
+                weighted_mean_score: 2.686717673389541,
+                min_score: 1.2277777777777779,
+                max_score: 3.611111111111111,
+                sum_length: 1776.4803020648944,
+                mean_score_diff: 1.4837169053854429,
+                class: "top_three",
+              },
+              {
+                from_block_geoid: "250173502022002",
+                method: "risk",
+                weighted_mean_score: 1.203000768004098,
+                min_score: 0.28888888888888886,
+                max_score: 3.25,
+                sum_length: 2266.2765467590466,
+                mean_score_diff: 1.4837169053854429,
+                class: "top_three",
+              },
+              {
+                from_block_geoid: "250173502022011",
+                method: "risk",
+                weighted_mean_score: 1.1682067441946073,
+                min_score: 0.15555555555555556,
+                max_score: 3.3527777777777774,
+                sum_length: 2191.8340369653015,
+                mean_score_diff: 1.4266614714285621,
+                class: "top_three",
+              },
+              {
+                from_block_geoid: "250173502022011",
+                method: "length",
+                weighted_mean_score: 2.5948682156231695,
+                min_score: 1.15,
+                max_score: 3.5694444444444446,
+                sum_length: 1676.3070060286536,
+                mean_score_diff: 1.4266614714285621,
+                class: "top_three",
+              },
+              {
+                from_block_geoid: "250173502022010",
+                method: "length",
+                weighted_mean_score: 2.6509122572035038,
+                min_score: 1.15,
+                max_score: 3.5694444444444446,
+                sum_length: 1694.5860874343814,
+                mean_score_diff: 1.387298043501804,
+                class: "top_three",
+              },
+              {
+                from_block_geoid: "250173502022010",
+                method: "risk",
+                weighted_mean_score: 1.2636142137016997,
+                min_score: 0.15555555555555556,
+                max_score: 3.4166666666666665,
+                sum_length: 2266.515933469259,
+                mean_score_diff: 1.387298043501804,
+                class: "top_three",
+              },
+              {
+                from_block_geoid: "250173501091004",
+                method: "length",
+                weighted_mean_score: 2.6209214596843644,
+                min_score: 1.2944444444444445,
+                max_score: 3.5888888888888886,
+                sum_length: 2199.336324377389,
+                mean_score_diff: 0.3183675548823435,
+                class: "bottom_three",
+              },
+              {
+                from_block_geoid: "250173501091004",
+                method: "risk",
+                weighted_mean_score: 2.302553904802021,
+                min_score: 0.6444444444444444,
+                max_score: 3.7527777777777778,
+                sum_length: 3055.841248512053,
+                mean_score_diff: 0.3183675548823435,
+                class: "bottom_three",
+              },
+              {
+                from_block_geoid: "250173501082007",
+                method: "risk",
+                weighted_mean_score: 2.1305885866037038,
+                min_score: 0.8500000000000001,
+                max_score: 3.4777777777777774,
+                sum_length: 2447.6084437445875,
+                mean_score_diff: 0.2797770723157127,
+                class: "bottom_three",
+              },
+              {
+                from_block_geoid: "250173501082007",
+                method: "length",
+                weighted_mean_score: 2.4103656589194165,
+                min_score: 1.238888888888889,
+                max_score: 3.211111111111111,
+                sum_length: 1964.6366912401063,
+                mean_score_diff: 0.2797770723157127,
+                class: "bottom_three",
+              },
+              {
+                from_block_geoid: "250173501091010",
+                method: "risk",
+                weighted_mean_score: 2.3566941538020885,
+                min_score: 0.7277777777777777,
+                max_score: 3.6555555555555554,
+                sum_length: 2850.5247140928436,
+                mean_score_diff: 0.2325226366300699,
+                class: "bottom_three",
+              },
+              {
+                from_block_geoid: "250173501091010",
+                method: "length",
+                weighted_mean_score: 2.5892167904321584,
+                min_score: 1.2944444444444445,
+                max_score: 3.505555555555555,
+                sum_length: 2214.9515486367445,
+                mean_score_diff: 0.2325226366300699,
+                class: "bottom_three",
+              },
+            ],
+            "data-e97e952a63d5e815ea822eb400a85f38": [
+              {
+                from_block_geoid: "250173501082007",
+                mean_score_diff: 0.2797770723157127,
+                weighted_mean_score: 2.4103656589194165,
+              },
+              {
+                from_block_geoid: "250173501091004",
+                mean_score_diff: 0.3183675548823435,
+                weighted_mean_score: 2.6209214596843644,
+              },
+              {
+                from_block_geoid: "250173501091010",
+                mean_score_diff: 0.2325226366300699,
+                weighted_mean_score: 2.5892167904321584,
+              },
+              {
+                from_block_geoid: "250173502022002",
+                mean_score_diff: 1.4837169053854429,
+                weighted_mean_score: 2.686717673389541,
+              },
+              {
+                from_block_geoid: "250173502022010",
+                mean_score_diff: 1.387298043501804,
+                weighted_mean_score: 2.6509122572035038,
+              },
+              {
+                from_block_geoid: "250173502022011",
+                mean_score_diff: 1.4266614714285621,
+                weighted_mean_score: 2.5948682156231695,
+              },
+            ],
+            "data-0b038d98d2d830213a9da65ef15840a2": [{ x: 1 }],
+          },
+        };
+        var embedOpt = { mode: "vega-lite" };
+
+        function showError(el, error) {
+          el.innerHTML =
+            '<div style="color:red;">' +
+            "<p>JavaScript Error: " +
+            error.message +
+            "</p>" +
+            "<p>This usually means there's a typo in your chart specification. " +
+            "See the javascript console for the full traceback.</p>" +
+            "</div>";
+          throw error;
+        }
+        const el = document.getElementById("vis");
+        vegaEmbed("#vis", spec, embedOpt).catch((error) =>
+          showError(el, error)
+        );
+      })(vegaEmbed);
+    </script>
+  </body>
+</html>

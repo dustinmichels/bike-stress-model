@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      #vis.vega-embed {
+        width: 100%;
+        display: flex;
+      }
+
+      #vis.vega-embed details,
+      #vis.vega-embed details summary {
+        position: relative;
+      }
+    </style>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/vega@6"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/vega-lite@6.1.0"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/vega-embed@7"
+    ></script>
+  </head>
+  <body>
+    <div id="vis"></div>
+    <script>
+      (function (vegaEmbed) {
+        var spec = {
+          config: { view: { continuousWidth: 300, continuousHeight: 300 } },
+          layer: [
+            {
+              data: { name: "data-90ed20a415c2c83847e994e94bd82b07" },
+              mark: { type: "bar" },
+              encoding: {
+                color: {
+                  field: "method",
+                  scale: { scheme: "set2" },
+                  title: "Method",
+                  type: "nominal",
+                },
+                tooltip: [
+                  { field: "school_name", title: "School", type: "nominal" },
+                  { field: "method", title: "Method", type: "nominal" },
+                  {
+                    field: "weighted_mean_score",
+                    format: ".3f",
+                    title: "Weighted Mean Score",
+                    type: "quantitative",
+                  },
+                  {
+                    field: "sum_length",
+                    format: ".1f",
+                    title: "Total Length",
+                    type: "quantitative",
+                  },
+                ],
+                x: {
+                  axis: { labelAngle: -45 },
+                  field: "school_name",
+                  sort: {
+                    field: "mean_score_diff",
+                    op: "max",
+                    order: "descending",
+                  },
+                  title: "School",
+                  type: "nominal",
+                },
+                xOffset: { field: "method", type: "nominal" },
+                y: {
+                  field: "weighted_mean_score",
+                  title: "Weighted Mean Score",
+                  type: "quantitative",
+                },
+              },
+              title:
+                "Mean Composite Score by School and Method (Risk vs. Length)",
+            },
+            {
+              data: { name: "data-d2554c48e297cbaa85ab4f00718bdbf1" },
+              mark: {
+                type: "text",
+                align: "center",
+                baseline: "bottom",
+                dy: -5,
+                fontSize: 10,
+                fontWeight: "bold",
+              },
+              encoding: {
+                text: {
+                  field: "mean_score_diff",
+                  format: ".3f",
+                  type: "quantitative",
+                },
+                x: {
+                  field: "school_name",
+                  sort: {
+                    field: "mean_score_diff",
+                    op: "max",
+                    order: "descending",
+                  },
+                  type: "nominal",
+                },
+                y: { field: "weighted_mean_score", type: "quantitative" },
+              },
+            },
+          ],
+          height: 400,
+          width: 600,
+          $schema: "https://vega.github.io/schema/vega-lite/v6.1.0.json",
+          datasets: {
+            "data-90ed20a415c2c83847e994e94bd82b07": [
+              {
+                school_name: "Somerville High School",
+                method: "risk",
+                weighted_mean_score: 1.148861159096763,
+                min_score: 0.0,
+                max_score: 3.06737106017192,
+                sum_length: 2566.0595885987364,
+                mean_score_diff: 0.9878813311192238,
+              },
+              {
+                school_name: "Somerville High School",
+                method: "length",
+                weighted_mean_score: 2.136742490215987,
+                min_score: 0.0,
+                max_score: 3.2569126074498564,
+                sum_length: 1963.6626430004192,
+                mean_score_diff: 0.9878813311192238,
+              },
+              {
+                school_name: "Capuano Early Childhood Center",
+                method: "length",
+                weighted_mean_score: 2.366698110985522,
+                min_score: 1.0380200860832138,
+                max_score: 3.3203730272596848,
+                sum_length: 2725.5329587293063,
+                mean_score_diff: 0.9741391567287836,
+              },
+              {
+                school_name: "Capuano Early Childhood Center",
+                method: "risk",
+                weighted_mean_score: 1.3925589542567385,
+                min_score: 0.2633428981348637,
+                max_score: 3.1894548063127695,
+                sum_length: 3543.083253866194,
+                mean_score_diff: 0.9741391567287836,
+              },
+              {
+                school_name: "Argenziano School",
+                method: "length",
+                weighted_mean_score: 2.329819852641205,
+                min_score: 0.8216332378223495,
+                max_score: 3.3504656160458453,
+                sum_length: 2712.1290707400244,
+                mean_score_diff: 0.8932418311472412,
+              },
+              {
+                school_name: "Argenziano School",
+                method: "risk",
+                weighted_mean_score: 1.4365780214939636,
+                min_score: 0.14240687679083094,
+                max_score: 3.2107808022922635,
+                sum_length: 3863.9482364984,
+                mean_score_diff: 0.8932418311472412,
+              },
+              {
+                school_name: "Kennedy School",
+                method: "risk",
+                weighted_mean_score: 1.5536477447417012,
+                min_score: 0.2067431850789096,
+                max_score: 3.5462697274031556,
+                sum_length: 2898.3065668194295,
+                mean_score_diff: 0.8391993279500956,
+              },
+              {
+                school_name: "Kennedy School",
+                method: "length",
+                weighted_mean_score: 2.3928470726917968,
+                min_score: 0.9888091822094692,
+                max_score: 3.5873744619799135,
+                sum_length: 2369.2085675519565,
+                mean_score_diff: 0.8391993279500956,
+              },
+              {
+                school_name: "Winter Hill at Edgerly",
+                method: "length",
+                weighted_mean_score: 2.562906737536767,
+                min_score: 0.34441260744985674,
+                max_score: 3.545272206303725,
+                sum_length: 2372.107847611632,
+                mean_score_diff: 0.8355306576055739,
+              },
+              {
+                school_name: "Winter Hill at Edgerly",
+                method: "risk",
+                weighted_mean_score: 1.7273760799311932,
+                min_score: 0.10830945558739256,
+                max_score: 3.563395415472779,
+                sum_length: 2963.0326053468784,
+                mean_score_diff: 0.8355306576055739,
+              },
+              {
+                school_name: "East Somerville Community School",
+                method: "risk",
+                weighted_mean_score: 1.7765623855616182,
+                min_score: 0.5856527977044477,
+                max_score: 3.580057388809182,
+                sum_length: 3049.1926244443894,
+                mean_score_diff: 0.8267619235539125,
+              },
+              {
+                school_name: "East Somerville Community School",
+                method: "length",
+                weighted_mean_score: 2.6033243091155307,
+                min_score: 1.5134863701578194,
+                max_score: 3.545695839311334,
+                sum_length: 2463.837753179942,
+                mean_score_diff: 0.8267619235539125,
+              },
+              {
+                school_name: "Brown School",
+                method: "risk",
+                weighted_mean_score: 1.4596958096905364,
+                min_score: 0.4562320916905444,
+                max_score: 3.1075214899713464,
+                sum_length: 3050.975475956366,
+                mean_score_diff: 0.6707776355617203,
+              },
+              {
+                school_name: "Brown School",
+                method: "length",
+                weighted_mean_score: 2.1304734452522567,
+                min_score: 0.9233166189111748,
+                max_score: 3.237535816618911,
+                sum_length: 2295.203193581744,
+                mean_score_diff: 0.6707776355617203,
+              },
+              {
+                school_name: "West Somerville Neighborhood School",
+                method: "length",
+                weighted_mean_score: 2.230078737573883,
+                min_score: 0.9723137535816619,
+                max_score: 3.513574498567335,
+                sum_length: 3096.828409522116,
+                mean_score_diff: 0.5690374348979603,
+              },
+              {
+                school_name: "West Somerville Neighborhood School",
+                method: "risk",
+                weighted_mean_score: 1.6610413026759228,
+                min_score: 0.37689828080229226,
+                max_score: 3.1371776504297992,
+                sum_length: 4092.4584472595675,
+                mean_score_diff: 0.5690374348979603,
+              },
+              {
+                school_name: "Healey School",
+                method: "length",
+                weighted_mean_score: 2.4423029923609367,
+                min_score: 1.027865329512894,
+                max_score: 3.6829871060171917,
+                sum_length: 2290.1217214627945,
+                mean_score_diff: 0.5455896140977792,
+              },
+              {
+                school_name: "Healey School",
+                method: "risk",
+                weighted_mean_score: 1.8967133782631576,
+                min_score: 0.4969914040114613,
+                max_score: 3.4135028653295127,
+                sum_length: 3492.0107035649557,
+                mean_score_diff: 0.5455896140977792,
+              },
+            ],
+            "data-d2554c48e297cbaa85ab4f00718bdbf1": [
+              {
+                school_name: "Argenziano School",
+                mean_score_diff: 0.8932418311472412,
+                weighted_mean_score: 2.329819852641205,
+              },
+              {
+                school_name: "Brown School",
+                mean_score_diff: 0.6707776355617203,
+                weighted_mean_score: 2.1304734452522567,
+              },
+              {
+                school_name: "Capuano Early Childhood Center",
+                mean_score_diff: 0.9741391567287836,
+                weighted_mean_score: 2.366698110985522,
+              },
+              {
+                school_name: "East Somerville Community School",
+                mean_score_diff: 0.8267619235539125,
+                weighted_mean_score: 2.6033243091155307,
+              },
+              {
+                school_name: "Healey School",
+                mean_score_diff: 0.5455896140977792,
+                weighted_mean_score: 2.4423029923609367,
+              },
+              {
+                school_name: "Kennedy School",
+                mean_score_diff: 0.8391993279500956,
+                weighted_mean_score: 2.3928470726917968,
+              },
+              {
+                school_name: "Somerville High School",
+                mean_score_diff: 0.9878813311192238,
+                weighted_mean_score: 2.136742490215987,
+              },
+              {
+                school_name: "West Somerville Neighborhood School",
+                mean_score_diff: 0.5690374348979603,
+                weighted_mean_score: 2.230078737573883,
+              },
+              {
+                school_name: "Winter Hill at Edgerly",
+                mean_score_diff: 0.8355306576055739,
+                weighted_mean_score: 2.562906737536767,
+              },
+            ],
+          },
+        };
+        var embedOpt = { mode: "vega-lite" };
+
+        function showError(el, error) {
+          el.innerHTML =
+            '<div style="color:red;">' +
+            "<p>JavaScript Error: " +
+            error.message +
+            "</p>" +
+            "<p>This usually means there's a typo in your chart specification. " +
+            "See the javascript console for the full traceback.</p>" +
+            "</div>";
+          throw error;
+        }
+        const el = document.getElementById("vis");
+        vegaEmbed("#vis", spec, embedOpt).catch((error) =>
+          showError(el, error)
+        );
+      })(vegaEmbed);
+    </script>
+  </body>
+</html>
