@@ -68,7 +68,7 @@
 <script setup lang="ts">
 import { AlertCircle, AlertTriangle, Layers, Loader2, ShieldCheck } from '@lucide/vue'
 import type { BikeInfrastructureModel, GeoJsonData, GeoJsonFeature } from '@/types'
-import { badColors, goodColors } from '@/utils/colorScale'
+import { badColors, goodColors, MISSING_DATA_COLOR, scoreToColor } from '@/utils/colorScale'
 import { calculateAllScores } from '@/utils/scoreCalculator'
 import {
   LngLatBounds,
@@ -121,22 +121,7 @@ const isMapLoaded = ref(false)
 /* ------------------------------------------------------------
   COLOR SCALE
 ------------------------------------------------------------ */
-
-const MISSING_DATA_COLOR = '#808080' // Grey for missing data
-
 const legendColors = computed(() => (props.useGoodColors ? goodColors : badColors))
-
-const getColorForScore = (score: number | null): string => {
-  // Return grey if score is null (missing data)
-  if (score === null || score === undefined) {
-    return MISSING_DATA_COLOR
-  }
-
-  const colors = props.useGoodColors ? goodColors : badColors
-  const clamped = Math.max(0, Math.min(5, score))
-  const idx = Math.round((clamped / 5) * (colors.length - 1))
-  return colors[idx] ?? colors[0] ?? MISSING_DATA_COLOR
-}
 
 /* ------------------------------------------------------------
   COMPUTE SCORES FOR GEOJSON
@@ -165,7 +150,7 @@ const computedGeoJson = computed<GeoJsonData | null>(() => {
 
     // Add newly computed scores to properties
     Object.assign(feature.properties, scores)
-    feature.properties.color = getColorForScore(scores.composite_score)
+    feature.properties.color = scoreToColor(scores.composite_score, legendColors.value)
     feature.id = index
     feature.properties.__id = index
     scoresSummary.push(scores.composite_score)
@@ -409,7 +394,7 @@ const setupMapLayers = () => {
     const feature = features[0] as unknown as GeoJsonFeature
     setSelectedFeature(feature)
 
-    const popupContent = createFeaturePopup(feature)
+    const popupContent = createFeaturePopup(feature, legendColors.value)
     if (popupContent) {
       if (currentPopup) {
         const oldPopup = currentPopup
@@ -475,9 +460,22 @@ const clearHighlight = () => {
   setSelectedFeature(null)
 }
 /* ------------------------------------------------------------
+  KEYBOARD SHORTCUTS
+------------------------------------------------------------ */
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && currentPopup) {
+    if (document.querySelector('.modal.is-active')) return
+    clearHighlight()
+    currentPopup.remove()
+    currentPopup = null
+  }
+}
+
+/* ------------------------------------------------------------
   MAP INIT
 ------------------------------------------------------------ */
 onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
   if (!mapContainer.value) return
 
   map = new MapLibreMap({
@@ -499,6 +497,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
   clearHighlight()
   currentPopup?.remove()
   currentPopup = null
@@ -735,30 +734,30 @@ input:checked:focus + .slider {
   padding: 12px 14px;
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
-  color: #363636;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  color: #222;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 :deep(.maplibregl-popup-anchor-top .maplibregl-popup-tip),
 :deep(.maplibregl-popup-anchor-top-left .maplibregl-popup-tip),
 :deep(.maplibregl-popup-anchor-top-right .maplibregl-popup-tip) {
-  border-bottom-color: rgba(255, 255, 255, 0.85);
+  border-bottom-color: rgba(255, 255, 255, 0.92);
 }
 
 :deep(.maplibregl-popup-anchor-bottom .maplibregl-popup-tip),
 :deep(.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip),
 :deep(.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip) {
-  border-top-color: rgba(255, 255, 255, 0.85);
+  border-top-color: rgba(255, 255, 255, 0.92);
 }
 
 :deep(.maplibregl-popup-anchor-left .maplibregl-popup-tip) {
-  border-right-color: rgba(255, 255, 255, 0.85);
+  border-right-color: rgba(255, 255, 255, 0.92);
 }
 
 :deep(.maplibregl-popup-anchor-right .maplibregl-popup-tip) {
-  border-left-color: rgba(255, 255, 255, 0.85);
+  border-left-color: rgba(255, 255, 255, 0.92);
 }
 
 :deep(.maplibregl-popup-close-button) {

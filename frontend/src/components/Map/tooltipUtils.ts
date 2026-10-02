@@ -1,20 +1,8 @@
 import type { GeoJsonFeature } from '@/types'
 import { icons } from 'lucide'
 import { Popup, type LngLatLike, type Map as MapLibreMap } from 'maplibre-gl'
+import { badColors, MAX_SCORE, scoreToColor } from '@/utils/colorScale'
 
-// Import color scale for bar charts
-const badColors = ['#fff7ec', '#fee8c8', '#fdbb84', '#e34a33', '#b30000']
-
-/**
- * Get color from badColors gradient based on score
- * @param value - The score value (0-5)
- * @returns Hex color string
- */
-const getScoreColor = (value: number): string => {
-  const normalized = value / 5 // Normalize to 0-1
-  const index = Math.min(Math.floor(normalized * badColors.length), badColors.length - 1)
-  return badColors[index] ?? badColors[0] ?? '#fff7ec'
-}
 const renderLucideSvg = (
   iconDef: (typeof icons)[keyof typeof icons],
   size = 14,
@@ -33,10 +21,16 @@ const renderLucideSvg = (
 
 /**
  * Creates a small bar chart for score visualization
- * @param value - The score value (0-5), or null if no data
+ * @param value - The score value (0 to maxScore), or null if no data
+ * @param colors - Color palette to use for bar color
+ * @param maxScore - Maximum possible score
  * @returns HTML string for the bar chart or "No data" message
  */
-const createScoreBar = (value: number | string | null | undefined): string => {
+const createScoreBar = (
+  value: number | string | null | undefined,
+  colors: string[] = badColors,
+  maxScore = MAX_SCORE,
+): string => {
   // Handle null/undefined values
   if (value === null || value === undefined || value === '') {
     return `
@@ -59,15 +53,15 @@ const createScoreBar = (value: number | string | null | undefined): string => {
     `
   }
 
-  const clamped = Math.max(0, Math.min(5, num))
-  const percentage = Math.round((clamped / 5) * 100)
-  const barColor = getScoreColor(clamped)
+  const clamped = Math.max(0, Math.min(maxScore, num))
+  const percentage = Math.round((clamped / maxScore) * 100)
+  const barColor = scoreToColor(clamped, colors, maxScore)
 
   return `
     <div style="background: rgba(0, 0, 0, 0.06); border-radius: 3px; height: 16px; overflow: hidden; position: relative; margin-top: 4px;">
       <div style="background: ${barColor}; height: 100%; width: ${percentage}%; transition: width 0.3s ease;"></div>
       <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #363636;">
-        ${num.toFixed(1)}/5
+        ${num.toFixed(1)}/${maxScore}
       </div>
     </div>
   `
@@ -85,13 +79,15 @@ const createFieldWithScore = (
   value: string | number,
   scoreValue?: number | string | null,
   iconSvg?: string,
+  colors: string[] = badColors,
+  maxScore = MAX_SCORE,
 ): string => {
   const formattedValue = typeof value === 'number' ? value.toFixed(2) : value
   let html = `<div style="margin-bottom: 12px;">
     <div style="display: flex; align-items: center; margin-bottom: 2px;">${iconSvg ?? ''}<strong>${label}:</strong>&nbsp;<span>${formattedValue}</span></div>`
 
   if (scoreValue !== undefined) {
-    html += createScoreBar(scoreValue)
+    html += createScoreBar(scoreValue, colors, maxScore)
   }
 
   html += '</div>'
@@ -103,7 +99,11 @@ const createFieldWithScore = (
  * @param feature - The GeoJSON feature
  * @returns HTML string for the popup
  */
-export const createFeaturePopup = (feature: GeoJsonFeature): string => {
+export const createFeaturePopup = (
+  feature: GeoJsonFeature,
+  colors: string[] = badColors,
+  maxScore = MAX_SCORE,
+): string => {
   if (!feature.properties) return ''
 
   const props = feature.properties
@@ -124,8 +124,10 @@ export const createFeaturePopup = (feature: GeoJsonFeature): string => {
     html += createFieldWithScore(
       'Separation Level',
       props.separation_level,
-      props.separation_level_score,
+      props.separation_level_score ?? null,
       renderLucideSvg(icons.Shield, 14, '#3273dc'),
+      colors,
+      maxScore,
     )
   }
 
@@ -134,21 +136,34 @@ export const createFeaturePopup = (feature: GeoJsonFeature): string => {
     html += createFieldWithScore(
       'Street Classification',
       props.street_classification,
-      props.street_classification_score,
+      props.street_classification_score ?? null,
       renderLucideSvg(icons.Car, 14, '#e67e22'),
+      colors,
+      maxScore,
     )
   }
 
   // Max Speed with score
-  if ('maxspeed_int' in props) {
-    const speedDisplay = `${props.maxspeed_int} mph`
-    html += createFieldWithScore(
-      'Max Speed',
-      speedDisplay,
-      props.maxspeed_int_score,
-      renderLucideSvg(icons.Gauge, 14, '#48c774'),
-    )
-  }
+  const rawSpeed = props.maxspeed_int
+  const hasSpeed =
+    rawSpeed !== undefined &&
+    rawSpeed !== null &&
+    rawSpeed !== '' &&
+    !isNaN(Number(rawSpeed)) &&
+    Number(rawSpeed) > 0
+
+  const speedDisplay = hasSpeed
+    ? `${rawSpeed} mph`
+    : `<span style="font-style: italic; color: #888;">unknown</span>`
+
+  html += createFieldWithScore(
+    'Max Speed',
+    speedDisplay,
+    hasSpeed ? (props.maxspeed_int_score ?? null) : null,
+    renderLucideSvg(icons.Gauge, 14, '#48c774'),
+    colors,
+    maxScore,
+  )
 
   // Composite Score with bar chart
   if ('composite_score' in props) {
@@ -164,13 +179,13 @@ export const createFeaturePopup = (feature: GeoJsonFeature): string => {
     if (numScore !== null && !isNaN(numScore)) {
       html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.1);">
         <div style="display: flex; align-items: center; margin-bottom: 2px;">${compositeIcon}<strong>Composite Score:</strong>&nbsp;<span>${numScore.toFixed(2)}</span></div>`
-      html += createScoreBar(numScore)
+      html += createScoreBar(numScore, colors, maxScore)
       html += '</div>'
     } else {
       // Show "No data" for composite score
       html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.1);">
         <div style="display: flex; align-items: center; margin-bottom: 2px;">${compositeIcon}<strong>Composite Score:</strong>&nbsp;<span style="font-style: italic; color: #999;">No data</span></div>`
-      html += createScoreBar(null)
+      html += createScoreBar(null, colors, maxScore)
       html += '</div>'
     }
   }
@@ -184,13 +199,17 @@ export const createFeaturePopup = (feature: GeoJsonFeature): string => {
  * @param map - The MapLibre Map instance
  * @param feature - The GeoJSON feature
  * @param lngLat - Coordinates where the popup should appear
+ * @param colors - Color palette to use for bar color
+ * @param maxScore - Maximum possible score
  */
 export const showFeaturePopup = (
   map: MapLibreMap,
   feature: GeoJsonFeature,
   lngLat: LngLatLike,
+  colors: string[] = badColors,
+  maxScore = MAX_SCORE,
 ): Popup | null => {
-  const popupContent = createFeaturePopup(feature)
+  const popupContent = createFeaturePopup(feature, colors, maxScore)
   if (!popupContent) return null
   return new Popup({ maxWidth: '320px' }).setLngLat(lngLat).setHTML(popupContent).addTo(map)
 }

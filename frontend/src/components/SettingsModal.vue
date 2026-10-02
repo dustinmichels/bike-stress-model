@@ -35,7 +35,7 @@
                   <input
                     type="range"
                     min="0"
-                    max="4"
+                    :max="MAX_SCORE"
                     step="0.5"
                     v-model.number="category.score"
                     class="slider"
@@ -68,6 +68,7 @@
 <script setup lang="ts">
 import { Car, ExternalLink, Gauge, RotateCcw, Settings, Shield } from '@lucide/vue'
 import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
+import { MAX_SCORE } from '@/utils/colorScale'
 import type { BikeInfrastructureModel } from '@/types'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
@@ -133,10 +134,10 @@ const formatCategoryName = (key: string): string => {
   return key.replace(/_/g, ' ').replace(/-/g, ' ')
 }
 
-// Function to get color based on score (0 = green, 4 = red)
+// Function to get color based on score (0 = green, MAX_SCORE = red)
 const getScoreColor = (score: number): string => {
   // Normalize score to 0-1 range
-  const normalized = score / 4
+  const normalized = score / MAX_SCORE
 
   // Interpolate between green (0) and red (4)
   // Green: rgb(34, 197, 94) - #22c55e
