@@ -1,26 +1,15 @@
 <template>
   <div class="box model-component">
     <div class="header-row">
-      <h2 class="title is-4">Customize Weights</h2>
+      <h2 class="title is-4 is-flex is-align-items-center">
+        <SlidersHorizontal :size="20" class="mr-2 has-text-info" />
+        <span>Customize Weights</span>
+      </h2>
 
       <div class="instruction-highlight">
         <span class="icon-text">
           <span class="icon has-text-info">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
+            <Info :size="18" />
           </span>
           <span
             >Drag the sliders to adjust the weights for each factor. Use the "eye" icon to toggle
@@ -44,7 +33,10 @@
               backgroundColor: segment.color,
             }"
           >
-            <span class="segment-label"> {{ segment.displayName }} ({{ segment.value }}%) </span>
+            <span class="segment-label">
+              <component :is="getSegmentIcon(segment.fieldName)" :size="14" class="mr-1" />
+              {{ segment.displayName }} ({{ segment.value }}%)
+            </span>
             <!-- Icons inside each segment -->
             <div class="segment-icons">
               <button
@@ -55,42 +47,15 @@
                   activeView === index ? 'Show all categories' : 'Show only ' + segment.displayName
                 "
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
+                <EyeOff v-if="activeView === index" :size="14" />
+                <Eye v-else :size="14" />
               </button>
               <button
                 class="icon-button"
                 @click="openSettings(index)"
                 :title="'Settings for ' + segment.displayName"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path
-                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-                  ></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
+                <Settings :size="14" />
               </button>
             </div>
           </div>
@@ -119,6 +84,7 @@
 </template>
 
 <script setup lang="ts">
+import { Car, Eye, EyeOff, Gauge, Info, Settings, Shield, SlidersHorizontal } from '@lucide/vue'
 import type { BikeInfrastructureModel, ModelWeights } from '@/types'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
@@ -133,6 +99,11 @@ interface SegmentConfig {
 // Props
 interface Props {
   modelConfig: BikeInfrastructureModel
+}
+const getSegmentIcon = (fieldName: keyof ModelWeights) => {
+  if (fieldName === 'separation_level') return Shield
+  if (fieldName === 'speed') return Gauge
+  return Car
 }
 
 const props = defineProps<Props>()
@@ -396,6 +367,9 @@ onUnmounted(() => {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   pointer-events: none;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .segment-icons {

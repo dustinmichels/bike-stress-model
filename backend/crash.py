@@ -1,5 +1,5 @@
 import os
-from datetime import date, timedelta
+from datetime import datetime, timezone
 
 import duckdb
 import geopandas as gpd
@@ -65,7 +65,8 @@ def filter_data(data, bbox: tuple, years: int = 4) -> pd.DataFrame:
     bbox: (min_lng, min_lat, max_lng, max_lat)
     """
 
-    n_years_ago = date.today().replace(year=date.today().year - years)
+    today = datetime.now(tz=timezone.utc).date()
+    n_years_ago = today.replace(year=today.year - years)
     filtered = data.filter(
         f"""
     Start_Lng BETWEEN {bbox[0]} AND {bbox[2]}
@@ -111,4 +112,4 @@ def main():
     # Somerville, MA
     bbox = (-71.134457, 42.3731775, -71.0753392, 42.4180395)
 
-    filtered_data = filter_data(data, years=4, bbox=bbox)
+    filter_data(data, years=4, bbox=bbox)

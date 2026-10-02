@@ -1,9 +1,8 @@
-from typing import List, Union
 
 import numpy as np
 import pandas as pd
 
-LanesInput = Union[str, int, float, List[str], None]
+LanesInput = str | int | float | list[str] | None
 
 LANES_RANKINGS = [
     (2, 0),  # 1-2 lanes -> 0 points
@@ -27,7 +26,7 @@ def extract_lanes(value: LanesInput) -> float:
         float or np.nan
     """
 
-    def parse_lanes(v: Union[str, int, float]) -> float:
+    def parse_lanes(v: str | float) -> float:
         if isinstance(v, int):
             return float(v)
         if isinstance(v, float):
@@ -50,7 +49,7 @@ def extract_lanes(value: LanesInput) -> float:
 
 
 def get_lanes_score(
-    num_lanes: float, rankings: List[tuple[float, int]] = LANES_RANKINGS
+    num_lanes: float, rankings: list[tuple[float, int]] = LANES_RANKINGS
 ) -> int:
     """Get score based on number of lanes."""
     if np.isnan(num_lanes):

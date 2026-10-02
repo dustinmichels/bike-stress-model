@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <meta charset="UTF-8" />
@@ -13,18 +13,9 @@
         position: relative;
       }
     </style>
-    <script
-      type="text/javascript"
-      src="https://cdn.jsdelivr.net/npm/vega@6"
-    ></script>
-    <script
-      type="text/javascript"
-      src="https://cdn.jsdelivr.net/npm/vega-lite@6.1.0"
-    ></script>
-    <script
-      type="text/javascript"
-      src="https://cdn.jsdelivr.net/npm/vega-embed@7"
-    ></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega@6"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-lite@6.1.0"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-embed@7"></script>
   </head>
   <body>
     <div id="vis"></div>
@@ -81,8 +72,7 @@
                   type: "quantitative",
                 },
               },
-              title:
-                "Mean Composite Score by Block and Method (Risk vs. Length)",
+              title: "Mean Composite Score by Block and Method (Risk vs. Length)",
             },
             {
               data: { name: "data-e97e952a63d5e815ea822eb400a85f38" },
@@ -302,9 +292,7 @@
           throw error;
         }
         const el = document.getElementById("vis");
-        vegaEmbed("#vis", spec, embedOpt).catch((error) =>
-          showError(el, error)
-        );
+        vegaEmbed("#vis", spec, embedOpt).catch((error) => showError(el, error));
       })(vegaEmbed);
     </script>
   </body>

@@ -45,7 +45,7 @@
 <script setup lang="ts">
 import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
 import type { BikeInfrastructureModel, GeoJsonData, ModelWeights } from '@/types'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import AboutComponent from './components/AboutComponent.vue'
 import ExportMap from './components/ExportButtons.vue'
 import ExportMapModal from './components/ExportModal/ExportMapModal.vue'
@@ -54,14 +54,32 @@ import ModelComponent from './components/ModelSliders.vue'
 import SettingsModal from './components/SettingsModal.vue'
 
 // Cities configuration
-const cities = ref<string[]>(['Somerville', 'Cambridge', 'Everett'])
-const currCity = ref<string>('Somerville')
+const cities = ref<string[]>(['Somerville', 'Cambridge', 'Everett', 'Malden'])
+
+// Parse optional city from URL query param (?city=malden,ma or ?city=malden)
+const parseCityFromUrl = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const raw = new URLSearchParams(window.location.search).get('city')
+  if (!raw) return null
+  const cleaned = raw.split(/[,-]/)[0].trim().toLowerCase()
+  return cities.value.find((c) => c.toLowerCase() === cleaned) ?? null
+}
+
+const currCity = ref<string>(parseCityFromUrl() ?? 'Somerville')
+
+const onPopState = () => {
+  const cityFromUrl = parseCityFromUrl() ?? 'Somerville'
+  if (cityFromUrl !== currCity.value) {
+    currCity.value = cityFromUrl
+  }
+}
 
 // City to geojson file mapping
 const cityFileMap: Record<string, string> = {
   Somerville: 'somerville_streets.geojson',
   Cambridge: 'cambridge_streets.geojson',
   Everett: 'everett_streets.geojson',
+  Malden: 'malden_streets.geojson',
 }
 
 // State
@@ -91,16 +109,31 @@ const loadGeoJsonForCity = async (city: string) => {
   }
 }
 
-// Load GeoJSON data on mount
+// Load GeoJSON data on mount and listen to back/forward browser navigation
 onMounted(() => {
   loadGeoJsonForCity(currCity.value)
+  window.addEventListener('popstate', onPopState)
 })
 
-// Watch for city changes and reload geojson
+onUnmounted(() => {
+  window.removeEventListener('popstate', onPopState)
+})
+
+// Watch for city changes and reload geojson + sync URL
 watch(currCity, (newCity) => {
   loadGeoJsonForCity(newCity)
+  // Avoid pushing a duplicate history entry if URL already reflects newCity (e.g. popstate)
+  if (parseCityFromUrl() !== newCity) {
+    const params = new URLSearchParams(window.location.search)
+    params.set('city', `${newCity.toLowerCase()},ma`)
+    const queryString = `?${params.toString().replace(/%2C/gi, ',')}`
+    window.history.pushState(
+      { city: newCity },
+      '',
+      `${window.location.pathname}${queryString}${window.location.hash}`,
+    )
+  }
 })
-
 // Handle weight changes from ModelComponent
 const handleWeightsChanged = (weights: ModelWeights) => {
   // Update weights in modelConfig

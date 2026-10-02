@@ -1,18 +1,17 @@
-from typing import List, Union
 
 import numpy as np
 import pandas as pd
 
-SpeedInput = Union[str, float, List[str]]
+SpeedInput = str | float | list[str]
 
 DEFAULT_SPEED_LIMIT = None  # Global default speed limit in mph
 
 SPEED_RANKINGS = [
     (20, 0),  # <= 20 mph -> 0 points
-    (25, 1),  #
-    (30, 2.5),  #
-    (40, 3),  #
-    (50, 3.5),  #
+    (25, 1),
+    (30, 2.5),
+    (40, 3),
+    (50, 3.5),
     (float("inf"), 4),  # > 50 mph -> 5 points
 ]
 
@@ -28,7 +27,7 @@ def extract_maxspeed(value: SpeedInput) -> float:
         float or np.nan
     """
 
-    def parse_speed(v: Union[str, float]) -> float:
+    def parse_speed(v: str | float) -> float:
         if isinstance(v, float):
             return v if not np.isnan(v) else np.nan
         if isinstance(v, str):
@@ -45,7 +44,7 @@ def extract_maxspeed(value: SpeedInput) -> float:
     return parse_speed(value)
 
 
-def get_speed_score(mph: float, rankings=SPEED_RANKINGS) -> Union[int, float]:
+def get_speed_score(mph: float, rankings=SPEED_RANKINGS) -> int | float:
     """Get score based on speed. Returns np.nan if mph is np.nan."""
     if pd.isna(mph):  # Handle both np.nan and pd.NA
         return np.nan

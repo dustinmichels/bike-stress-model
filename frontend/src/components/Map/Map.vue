@@ -1,16 +1,23 @@
 <template>
   <div class="box map-component">
-    <div class="notification is-danger is-light" v-if="error">
-      {{ error }}
+    <div class="notification is-danger is-light is-flex is-align-items-center" v-if="error">
+      <AlertCircle :size="18" class="mr-2" />
+      <span>{{ error }}</span>
     </div>
 
-    <div class="notification is-info is-light" v-if="loading">Loading map data...</div>
+    <div class="notification is-info is-light is-flex is-align-items-center" v-if="loading">
+      <Loader2 :size="18" class="mr-2 spin-icon" />
+      <span>Loading map data...</span>
+    </div>
 
     <div ref="mapContainer" class="map-container"></div>
 
     <!-- Legend -->
     <div class="legend">
-      <div class="legend-title">Composite Score</div>
+      <div class="legend-title is-flex is-align-items-center">
+        <Layers :size="14" class="mr-1" />
+        <span>Composite Score</span>
+      </div>
 
       <div class="legend-colors">
         <div
@@ -35,42 +42,51 @@
     <!-- Color Scale Toggle -->
     <div class="color-toggle">
       <div class="toggle-container">
-        <span class="toggle-label" :class="{ active: useGoodColors }">Safety</span>
+        <span
+          class="toggle-label is-inline-flex is-align-items-center"
+          :class="{ active: useGoodColors }"
+        >
+          <ShieldCheck :size="14" class="mr-1" />
+          <span>Safety</span>
+        </span>
         <label class="switch">
           <input type="checkbox" :checked="!useGoodColors" @change="$emit('toggleColors')" />
           <span class="slider"></span>
         </label>
-        <span class="toggle-label" :class="{ active: !useGoodColors }">Risk</span>
+        <span
+          class="toggle-label is-inline-flex is-align-items-center"
+          :class="{ active: !useGoodColors }"
+        >
+          <AlertTriangle :size="14" class="mr-1" />
+          <span>Risk</span>
+        </span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { AlertCircle, AlertTriangle, Layers, Loader2, ShieldCheck } from '@lucide/vue'
 import type { BikeInfrastructureModel, GeoJsonData, GeoJsonFeature } from '@/types'
 import { badColors, goodColors } from '@/utils/colorScale'
 import { calculateAllScores } from '@/utils/scoreCalculator'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import {
+  LngLatBounds,
+  Map as MapLibreMap,
+  NavigationControl,
+  Popup,
+  setWorkerUrl,
+  type FilterSpecification,
+  type GeoJSONSource,
+  type MapLayerMouseEvent,
+} from 'maplibre-gl'
+import type { FeatureCollection } from 'geojson'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { bindFeaturePopup } from './tooltipUtils'
+import { createFeaturePopup } from './tooltipUtils'
 
-// Fix Leaflet marker assets
-import iconRetina from 'leaflet/dist/images/marker-icon-2x.png'
-import icon from 'leaflet/dist/images/marker-icon.png'
-import iconShadow from 'leaflet/dist/images/marker-shadow.png'
-
-const DefaultIcon = L.icon({
-  iconUrl: icon,
-  iconRetinaUrl: iconRetina,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-})
-L.Marker.prototype.options.icon = DefaultIcon
-
+setWorkerUrl(workerUrl)
 // Props
 interface Props {
   geojsonData: GeoJsonData | null
@@ -98,10 +114,10 @@ const mapContainer = ref<HTMLElement | null>(null)
 const error = ref('')
 const loading = ref(false)
 
-// Leaflet layers
-let map: L.Map | null = null
-let geojsonLayer: L.GeoJSON | null = null
-
+// MapLibre instances
+let map: MapLibreMap | null = null
+let currentPopup: Popup | null = null
+const isMapLoaded = ref(false)
 /* ------------------------------------------------------------
   COLOR SCALE
 ------------------------------------------------------------ */
@@ -149,9 +165,10 @@ const computedGeoJson = computed<GeoJsonData | null>(() => {
 
     // Add newly computed scores to properties
     Object.assign(feature.properties, scores)
+    feature.properties.color = getColorForScore(scores.composite_score)
+    feature.id = index
+    feature.properties.__id = index
     scoresSummary.push(scores.composite_score)
-
-    // Count missing data
     if (scores.composite_score === null) {
       missingDataCount++
     }
@@ -202,109 +219,319 @@ const computedGeoJson = computed<GeoJsonData | null>(() => {
 })
 
 /* ------------------------------------------------------------
-  LINE WIDTH VS ZOOM
+  BOUNDS CALCULATION
 ------------------------------------------------------------ */
-const getLineWeight = (zoom: number): number => {
-  if (zoom <= 12) return 1
-  if (zoom <= 14) return 2
-  if (zoom <= 16) return 3
-  if (zoom <= 18) return 5
-  return 7
+const fitToBounds = (data: GeoJsonData) => {
+  if (!map) return
+  const bounds = new LngLatBounds()
+  let hasCoords = false
+
+  const processCoords = (coords: unknown) => {
+    if (
+      Array.isArray(coords) &&
+      coords.length >= 2 &&
+      typeof coords[0] === 'number' &&
+      typeof coords[1] === 'number'
+    ) {
+      bounds.extend([coords[0], coords[1]])
+      hasCoords = true
+    } else if (Array.isArray(coords)) {
+      for (const item of coords) {
+        processCoords(item)
+      }
+    }
+  }
+
+  for (const feature of data.features) {
+    if (feature.geometry?.coordinates) {
+      processCoords(feature.geometry.coordinates)
+    }
+  }
+
+  if (hasCoords) {
+    map.fitBounds(bounds, { padding: 50, maxZoom: 16 })
+  }
+}
+/* ------------------------------------------------------------
+  SETUP LAYERS
+------------------------------------------------------------ */
+const setupMapLayers = () => {
+  if (!map || isMapLoaded.value) return
+  if (!map.isStyleLoaded()) return
+  isMapLoaded.value = true
+
+  // Add GeoJSON source
+  if (!map.getSource('streets-data')) {
+    map.addSource('streets-data', {
+      type: 'geojson',
+      data: (computedGeoJson.value as unknown as FeatureCollection) ?? {
+        type: 'FeatureCollection',
+        features: [],
+      },
+    })
+  }
+
+  // Add main styled line layer
+  if (!map.getLayer('streets-line')) {
+    map.addLayer({
+      id: 'streets-line',
+      type: 'line',
+      source: 'streets-data',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+      },
+      paint: {
+        'line-color': ['coalesce', ['get', 'color'], MISSING_DATA_COLOR],
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          10,
+          1,
+          12,
+          1.5,
+          14,
+          2.5,
+          16,
+          4,
+          18,
+          6,
+          20,
+          8,
+        ],
+        'line-opacity': 0.9,
+      },
+    })
+  }
+
+  // Add highlight layers for selected street using existing streets-data source
+  if (!map.getLayer('selected-street-casing')) {
+    map.addLayer({
+      id: 'selected-street-casing',
+      type: 'line',
+      source: 'streets-data',
+      filter: ['==', ['get', '__id'], -1],
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+      },
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          10,
+          4,
+          12,
+          5.5,
+          14,
+          7.5,
+          16,
+          10,
+          18,
+          13,
+          20,
+          16,
+        ],
+        'line-opacity': 0.9,
+      },
+    })
+  }
+
+  if (!map.getLayer('selected-street-line')) {
+    map.addLayer({
+      id: 'selected-street-line',
+      type: 'line',
+      source: 'streets-data',
+      filter: ['==', ['get', '__id'], -1],
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+      },
+      paint: {
+        'line-color': '#00e5ff',
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          10,
+          2.5,
+          12,
+          3.5,
+          14,
+          5,
+          16,
+          7,
+          18,
+          9.5,
+          20,
+          12,
+        ],
+        'line-opacity': 1,
+      },
+    })
+  }
+
+  // Hover interaction using 10px bounding box
+  map.on('mousemove', (e: MapLayerMouseEvent) => {
+    if (!map) return
+    const bbox: [[number, number], [number, number]] = [
+      [e.point.x - 5, e.point.y - 5],
+      [e.point.x + 5, e.point.y + 5],
+    ]
+    const features = map.queryRenderedFeatures(bbox, {
+      layers: ['streets-line', 'selected-street-line'],
+    })
+    map.getCanvas().style.cursor = features.length > 0 ? 'pointer' : ''
+  })
+
+  // Click handler for popup and segment highlight using 10px bounding box
+  map.on('click', (e: MapLayerMouseEvent) => {
+    if (!map) return
+    const bbox: [[number, number], [number, number]] = [
+      [e.point.x - 5, e.point.y - 5],
+      [e.point.x + 5, e.point.y + 5],
+    ]
+    const features = map.queryRenderedFeatures(bbox, {
+      layers: ['streets-line', 'selected-street-line'],
+    })
+    if (features.length === 0) {
+      clearHighlight()
+      if (currentPopup) {
+        currentPopup.remove()
+        currentPopup = null
+      }
+      return
+    }
+
+    const feature = features[0] as unknown as GeoJsonFeature
+    setSelectedFeature(feature)
+
+    const popupContent = createFeaturePopup(feature)
+    if (popupContent) {
+      if (currentPopup) {
+        const oldPopup = currentPopup
+        currentPopup = null
+        oldPopup.remove()
+      }
+      const popup = new Popup({ maxWidth: '320px' })
+        .setLngLat(e.lngLat)
+        .setHTML(popupContent)
+        .addTo(map)
+
+      popup.on('close', () => {
+        if (currentPopup === popup) {
+          clearHighlight()
+          currentPopup = null
+        }
+      })
+      currentPopup = popup
+    }
+  })
+
+  // Fit initial bounds if data is already available
+  if (props.geojsonData) {
+    fitToBounds(props.geojsonData)
+  }
 }
 
+const setSelectedFeature = (feature: GeoJsonFeature | null) => {
+  if (!map) return
+  if (!map.getLayer('selected-street-line') || !map.getLayer('selected-street-casing')) return
+
+  if (!feature) {
+    const emptyFilter: FilterSpecification = ['==', ['get', '__id'], -1]
+    map.setFilter('selected-street-casing', emptyFilter)
+    map.setFilter('selected-street-line', emptyFilter)
+    return
+  }
+
+  const id = feature.properties?.__id
+  let filter: FilterSpecification
+  if (typeof id === 'number' || typeof id === 'string') {
+    filter = ['==', ['get', '__id'], id]
+  } else if (
+    typeof feature.properties?.u === 'number' &&
+    typeof feature.properties?.v === 'number'
+  ) {
+    const key = typeof feature.properties.key === 'number' ? feature.properties.key : 0
+    filter = [
+      'all',
+      ['==', ['get', 'u'], feature.properties.u],
+      ['==', ['get', 'v'], feature.properties.v],
+      ['==', ['get', 'key'], key],
+    ]
+  } else {
+    filter = ['==', ['get', 'name'], feature.properties?.name ?? '']
+  }
+
+  map.setFilter('selected-street-casing', filter)
+  map.setFilter('selected-street-line', filter)
+}
+
+const clearHighlight = () => {
+  setSelectedFeature(null)
+}
 /* ------------------------------------------------------------
   MAP INIT
 ------------------------------------------------------------ */
-onMounted(async () => {
-  if (mapContainer.value) {
-    map = L.map(mapContainer.value).setView([42.3876, -71.0995], 15)
+onMounted(() => {
+  if (!mapContainer.value) return
 
-    L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner_dark/{z}/{x}/{y}{r}.png', {
-      minZoom: 0,
-      maxZoom: 20,
-      attribution:
-        '&copy; <a href="https://www.stadiamaps.com/">Stadia Maps</a> ' +
-        '&copy; <a href="https://www.stamen.com/">Stamen Design</a> ' +
-        '&copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> ' +
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-    }).addTo(map)
+  map = new MapLibreMap({
+    container: mapContainer.value,
+    style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    center: [-71.0995, 42.3876],
+    zoom: 14,
+  })
+  window._map = map
+  map.on('error', (e) => console.error('MapLibre error:', e))
 
-    map.on('zoomend', () => {
-      if (geojsonLayer && map) {
-        const zoom = map.getZoom()
-        const lineWeight = getLineWeight(zoom)
+  map.addControl(new NavigationControl({ showCompass: true }), 'top-left')
 
-        geojsonLayer.setStyle((feature) => {
-          const score = feature?.properties?.composite_score ?? null
-          return {
-            color: getColorForScore(score),
-            weight: lineWeight,
-            opacity: 0.9,
-          }
-        })
-      }
-    })
+  map.on('styledata', setupMapLayers)
+  map.on('load', setupMapLayers)
+  if (map.isStyleLoaded()) {
+    setupMapLayers()
   }
 })
 
 onUnmounted(() => {
+  clearHighlight()
+  currentPopup?.remove()
+  currentPopup = null
   map?.remove()
   map = null
 })
 
 /* ------------------------------------------------------------
-  GEOJSON RENDERING
+  GEOJSON REACTIVITY
 ------------------------------------------------------------ */
-const addGeoJsonToMap = (geojsonData: GeoJsonData) => {
-  if (!map) return
-
-  if (geojsonLayer) map.removeLayer(geojsonLayer)
-
-  geojsonLayer = L.geoJSON(geojsonData as any, {
-    onEachFeature: (feature, layer) => {
-      bindFeaturePopup(feature, layer)
-    },
-    style: (feature) => {
-      const score = feature?.properties?.composite_score ?? null
-      const zoom = map?.getZoom() ?? 15
-
-      return {
-        color: getColorForScore(score),
-        weight: getLineWeight(zoom),
-        opacity: 0.9,
-      }
-    },
-  }).addTo(map)
-
-  const bounds = geojsonLayer.getBounds()
-  if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50] })
-}
-
-// Watch for changes to computed GeoJSON and re-render
-watch(
-  computedGeoJson,
-  (newData) => {
-    if (newData) {
-      addGeoJsonToMap(newData)
+// Watch computed GeoJSON to update map layer data
+watch(computedGeoJson, (newData) => {
+  if (!map || !newData) return
+  if (!isMapLoaded.value) {
+    if (map.isStyleLoaded()) {
+      setupMapLayers()
     }
-  },
-  { immediate: true },
-)
-
-// Watch for color scheme changes
+    return
+  }
+  const source = map.getSource('streets-data') as GeoJSONSource | undefined
+  if (source) {
+    source.setData(newData as unknown as FeatureCollection)
+  }
+})
+// Watch raw geojsonData changes (e.g. city change) to fit bounds
 watch(
-  () => props.useGoodColors,
-  () => {
-    if (geojsonLayer) {
-      geojsonLayer.setStyle((feature) => {
-        const score = feature?.properties?.composite_score ?? null
-        const zoom = map?.getZoom() ?? 15
-        return {
-          color: getColorForScore(score),
-          weight: getLineWeight(zoom),
-          opacity: 0.9,
-        }
-      })
+  () => props.geojsonData,
+  (newData) => {
+    clearHighlight()
+    currentPopup?.remove()
+    currentPopup = null
+    if (newData && map && isMapLoaded.value) {
+      fitToBounds(newData)
     }
   },
 )
@@ -394,13 +621,23 @@ watch(
 /* Color toggle */
 .color-toggle {
   position: absolute;
-  bottom: 50px;
-  right: 20px;
-  background: white;
+  top: 32px;
+  right: 32px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 10px 15px;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   z-index: 1000;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.color-toggle:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .toggle-container {
@@ -473,5 +710,70 @@ input:focus + .slider {
 
 input:checked:focus + .slider {
   box-shadow: 0 0 1px #f14668;
+}
+
+/* MapLibre popup styles */
+:deep(.maplibregl-popup) {
+  max-width: 320px;
+  font-family:
+    BlinkMacSystemFont,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+
+:deep(.maplibregl-popup-content) {
+  padding: 12px 14px;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  color: #363636;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+:deep(.maplibregl-popup-anchor-top .maplibregl-popup-tip),
+:deep(.maplibregl-popup-anchor-top-left .maplibregl-popup-tip),
+:deep(.maplibregl-popup-anchor-top-right .maplibregl-popup-tip) {
+  border-bottom-color: rgba(255, 255, 255, 0.85);
+}
+
+:deep(.maplibregl-popup-anchor-bottom .maplibregl-popup-tip),
+:deep(.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip),
+:deep(.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip) {
+  border-top-color: rgba(255, 255, 255, 0.85);
+}
+
+:deep(.maplibregl-popup-anchor-left .maplibregl-popup-tip) {
+  border-right-color: rgba(255, 255, 255, 0.85);
+}
+
+:deep(.maplibregl-popup-anchor-right .maplibregl-popup-tip) {
+  border-left-color: rgba(255, 255, 255, 0.85);
+}
+
+:deep(.maplibregl-popup-close-button) {
+  padding: 4px 8px;
+  font-size: 16px;
+  color: #888;
+}
+
+:deep(.maplibregl-popup-close-button:hover) {
+  color: #222;
+  background: transparent;
+}
+
+:deep(.maplibregl-ctrl-group) {
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 </style>

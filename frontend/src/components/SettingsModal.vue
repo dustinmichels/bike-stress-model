@@ -3,7 +3,10 @@
     <div class="modal-background" @click="closeModal"></div>
     <div class="modal-card">
       <header class="modal-card-head">
-        <p class="modal-card-title">Settings: {{ displayName }}</p>
+        <p class="modal-card-title is-flex is-align-items-center">
+          <component :is="getFieldIcon(dataField)" :size="20" class="mr-2" />
+          <span>Settings: {{ displayName }}</span>
+        </p>
         <button class="delete" aria-label="close" @click="closeModal"></button>
       </header>
       <section class="modal-card-body">
@@ -13,7 +16,7 @@
           <div class="is-flex is-justify-content-flex-end mb-3">
             <button class="button is-small reset-button" @click="resetScores">
               <span class="icon is-small">
-                <i class="fas fa-undo"></i>
+                <RotateCcw :size="14" />
               </span>
               <span>Reset All</span>
             </button>
@@ -52,7 +55,7 @@
             class="button is-link is-small mt-4 learn-more-button"
           >
             <span class="icon is-small">
-              <i class="fas fa-external-link-alt"></i>
+              <ExternalLink :size="14" />
             </span>
             <span>Learn More on OpenStreetMap Wiki</span>
           </a>
@@ -63,6 +66,7 @@
 </template>
 
 <script setup lang="ts">
+import { Car, ExternalLink, Gauge, RotateCcw, Settings, Shield } from '@lucide/vue'
 import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
 import type { BikeInfrastructureModel } from '@/types'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -70,6 +74,12 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 interface Props {
   dataField: string | null
   modelConfig: BikeInfrastructureModel
+}
+const getFieldIcon = (field: string | null) => {
+  if (field === 'separation_level') return Shield
+  if (field === 'speed_limit') return Gauge
+  if (field === 'street_classification') return Car
+  return Settings
 }
 
 const props = defineProps<Props>()

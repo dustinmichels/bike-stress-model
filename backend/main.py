@@ -3,9 +3,8 @@ import shutil
 
 import osmnx as ox
 import pandas as pd
-
 import src.stressmodel as sm
-from util import extract_width, first_if_list
+from util import extract_width
 
 OUT_PATH = "data/out/main"
 
@@ -13,11 +12,12 @@ PLACES = [
     "Somerville, Massachusetts, USA",
     "Cambridge, Massachusetts, USA",
     "Everett, Massachusetts, USA",
+    "Malden, Massachusetts, USA",
 ]
 
 
 # add cycleway to useful tags
-ox.settings.useful_tags_way = ox.settings.useful_tags_way + [
+ox.settings.useful_tags_way += [
     "massgis:way_id",
     "condition",
     "smoothness",
@@ -79,7 +79,9 @@ def get_network(place: str, network_type: str = "bike"):
 def process_network(edges: pd.DataFrame) -> pd.DataFrame:
     # drop some unneeded columns
     edges = edges.drop(
-        ["ref", "service", "access", "bridge", "tunnel", "junction"], axis=1
+        ["ref", "service", "access", "bridge", "tunnel", "junction"],
+        axis=1,
+        errors="ignore",
     )
 
     # if "name" is null, drop the row (gets rid of tiny dead ends)

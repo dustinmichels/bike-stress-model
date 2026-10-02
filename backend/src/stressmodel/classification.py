@@ -1,9 +1,8 @@
-from typing import List, Union
 
 import numpy as np
 import pandas as pd
 
-StreetInput = Union[str, List[str]]
+StreetInput = str | list[str]
 
 # Street type classifications
 # See: https://wiki.openstreetmap.org/wiki/Key:highway

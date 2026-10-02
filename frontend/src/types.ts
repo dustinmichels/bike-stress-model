@@ -44,15 +44,20 @@ export interface StreetProperties {
   maxspeed_int_score?: number
   composite_score?: number
 
-  [key: string]: any
+  [key: string]: unknown
+}
+
+export interface GeoJsonGeometry {
+  type: string
+  coordinates: unknown
 }
 
 export interface GeoJsonFeature {
+  id?: string | number
   type: string
   properties: StreetProperties
-  geometry: any
+  geometry: GeoJsonGeometry
 }
-
 export interface GeoJsonData {
   type: string
   features: GeoJsonFeature[]

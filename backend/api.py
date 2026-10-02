@@ -3,10 +3,10 @@ import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware  # ADD THIS
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
 # Import from main.py
 from main import OUTPUT_COLUMNS, prepare_data_for_place
+from pydantic import BaseModel, ConfigDict
 
 app = FastAPI(title="Bike Stress Network API")
 
@@ -25,8 +25,9 @@ app.add_middleware(
 class NetworkRequest(BaseModel):
     city: str
 
-    class Config:
-        json_schema_extra = {"example": {"city": "Somerville, Massachusetts, USA"}}
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"city": "Somerville, Massachusetts, USA"}}
+    )
 
 
 @app.get("/")
@@ -53,7 +54,7 @@ def get_network_geojson(request: NetworkRequest):
     """
     try:
         # Process the data
-        nodes, edges = prepare_data_for_place(request.city)
+        _nodes, edges = prepare_data_for_place(request.city)
 
         # Filter down to output columns
         edges = edges[OUTPUT_COLUMNS]
@@ -77,8 +78,8 @@ def get_network_geojson(request: NetworkRequest):
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error processing city '{request.city}': {str(e)}"
-        )
+            status_code=500, detail=f"Error processing city '{request.city}': {e!s}"
+        ) from e
 
 
 if __name__ == "__main__":

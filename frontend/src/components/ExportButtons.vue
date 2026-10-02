@@ -2,7 +2,7 @@
   <div class="box export-map-container">
     <button class="button is-primary is-fullwidth" @click="openModal">
       <span class="icon">
-        <i class="fas fa-download"></i>
+        <Download :size="16" />
       </span>
       <span>Export Map</span>
     </button>
@@ -13,7 +13,7 @@
       class="button is-info is-fullwidth mt-2"
     >
       <span class="icon">
-        <i class="fas fa-external-link-alt"></i>
+        <BookOpen :size="16" />
       </span>
       <span>About</span>
     </a>
@@ -21,6 +21,8 @@
 </template>
 
 <script setup lang="ts">
+import { BookOpen, Download } from '@lucide/vue'
+
 const emit = defineEmits<{
   openModal: []
 }>()

@@ -1,12 +1,11 @@
 import re
-from typing import List, Union
 
 import numpy as np
 import pandas as pd
 
 FEET_TO_M = 0.3048
 
-SpeedInput = Union[str, float, List[str]]
+SpeedInput = str | float | list[str]
 
 
 def extract_width(value) -> float:

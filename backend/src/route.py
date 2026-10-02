@@ -1,3 +1,5 @@
+import itertools
+
 import geopandas as gpd
 import networkx as nx
 import osmnx as ox
@@ -43,7 +45,7 @@ def get_route_gdf(G, start_coord, end_coord, weight="composite_score"):
     of 110m) on the segment with score 3.0.
     """
 
-    use_crs = G.graph["crs"] if "crs" in G.graph else "EPSG:4326"
+    use_crs = G.graph.get("crs", "EPSG:4326")
 
     # --- 1. Convert start/end to x, y ---
     if isinstance(start_coord, Point):
@@ -67,14 +69,14 @@ def get_route_gdf(G, start_coord, end_coord, weight="composite_score"):
         raise ValueError("No route found between start and end")
 
     # --- 4. Extract edge data ---
-    route_edges = list(zip(route[:-1], route[1:]))
+    route_edges = list(itertools.pairwise(route))
     composite_scores = []
     lengths = []
 
     for u, v in route_edges:
         data = G.get_edge_data(u, v)
         if data is not None:
-            edge = list(data.values())[0]
+            edge = next(iter(data.values()))
             composite_scores.append(edge.get("composite_score", 0))
             lengths.append(edge.get("length", 0))
         else:
@@ -138,7 +140,7 @@ def compute_routes_from_census_blocks_to_school(
     errors = []
     dataframes = []
 
-    use_crs = G.graph["crs"] if "crs" in G.graph else "EPSG:4326"
+    use_crs = G.graph.get("crs", "EPSG:4326")
 
     for i, row in tqdm(
         somerville_census_blocks.iterrows(), total=len(somerville_census_blocks)
@@ -147,7 +149,7 @@ def compute_routes_from_census_blocks_to_school(
         dest_point = school["geometry"]
         try:
             route_gdf = get_route_gdf(G, orig_point, dest_point, weight=weight)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             errors.append(f"Error on index {i}: {e}")
             route_gdf = gpd.GeoDataFrame()
 

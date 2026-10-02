@@ -1,14 +1,12 @@
-from typing import List, Union
-from unittest.mock import Mock
 
 import numpy as np
 import pandas as pd
 import pytest
 
 # Assuming your main file is named network_processing.py
+from src.stressmodel.speed import extract_maxspeed
 from util import (
     FEET_TO_M,
-    extract_maxspeed,
     extract_width,
 )
 

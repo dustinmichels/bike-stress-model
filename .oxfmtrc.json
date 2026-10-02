@@ -1,0 +1,16 @@
+{
+  "semi": false,
+  "singleQuote": true,
+  "printWidth": 100,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "*.geojson",
+    "frontend/public/**",
+    "backend/**",
+    "deployed-charts/**",
+    "project.code-workspace",
+    "*.yaml",
+    "*.yml",
+    ".github/**"
+  ]
+}

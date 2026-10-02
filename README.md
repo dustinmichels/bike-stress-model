@@ -1,5 +1,7 @@
 # Bike stress map
 
+The version of the code associated with my advanced GIS class, which won best in show in 2026, see [adv-gis](https://github.com/dustinmichels/bike-stress-model/tree/adv-gis).
+
 ## API
 
 ```sh

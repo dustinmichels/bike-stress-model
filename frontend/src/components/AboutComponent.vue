@@ -1,32 +1,54 @@
 <template>
   <div class="box about-component">
-    <!-- Title and City Selector -->
+    <!-- Title -->
     <div class="header-row">
-      <h2 class="title is-4">Bike Safety Map</h2>
-      <div class="field">
-        <div class="control">
-          <div class="select">
-            <select :value="currCity" @change="handleCityChange">
-              <option v-for="city in cities" :key="city" :value="city">{{ city }}, MA, USA</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <h2 class="title is-4 is-flex is-align-items-center">
+        <Bike :size="24" class="mr-2 has-text-primary" />
+        <span>Bike Safety Map</span>
+      </h2>
     </div>
 
     <div class="content">
       <p>
         This map shows a composite safety score for each segment of the cycling network in
-        <span class="has-background-info-light px-2 py-1" style="border-radius: 4px"
-          >{{ currCity }}, MA</span
-        >. The model is targeted towards the needs of children and other vulnerable riders.
+        <span class="city-select-inline-wrapper"
+          ><span class="city-select-wrapper">
+            <select
+              :value="currCity"
+              @change="handleCityChange"
+              class="city-select"
+              aria-label="Select city"
+            >
+              <option v-for="city in cities" :key="city" :value="city">{{ city }}, MA</option>
+            </select>
+            <span class="city-select-arrow" aria-hidden="true">
+              <ChevronDown :size="14" />
+            </span> </span
+          >.</span
+        >
+        The model is targeted towards the needs of children and other vulnerable riders.
       </p>
 
       <p class="mb-4">The score takes into account:</p>
-      <ul>
-        <li>the level of separation of the biking infrastructure</li>
-        <li>the busyness of the street</li>
-        <li>the speed on the street</li>
+      <ul class="factors-list">
+        <li>
+          <span class="icon is-small has-text-info mr-2">
+            <Shield :size="16" />
+          </span>
+          <span>the level of separation of the biking infrastructure</span>
+        </li>
+        <li>
+          <span class="icon is-small has-text-warning mr-2">
+            <Car :size="16" />
+          </span>
+          <span>the busyness of the street</span>
+        </li>
+        <li>
+          <span class="icon is-small has-text-success mr-2">
+            <Gauge :size="16" />
+          </span>
+          <span>the speed on the street</span>
+        </li>
       </ul>
 
       <p class="mt-4">
@@ -45,9 +67,10 @@
                 href="https://dustinmichels.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="has-text-link"
+                class="has-text-link is-inline-flex is-align-items-center"
               >
-                Dustin Michels
+                <span>Dustin Michels</span>
+                <ExternalLink :size="12" class="ml-1" />
               </a>
             </div>
           </div>
@@ -61,7 +84,7 @@
               class="button is-small is-light"
             >
               <span class="icon">
-                <i class="fab fa-github"></i>
+                <GitBranch :size="16" />
               </span>
               <span>View on GitHub</span>
             </a>
@@ -73,6 +96,8 @@
 </template>
 
 <script setup lang="ts">
+import { Bike, Car, ChevronDown, ExternalLink, Gauge, GitBranch, Shield } from '@lucide/vue'
+
 // Props
 interface Props {
   cities: string[]
@@ -112,10 +137,6 @@ const handleCityChange = (event: Event) => {
   margin-bottom: 0;
 }
 
-.header-row .field {
-  margin-bottom: 0;
-}
-
 .content {
   flex: 1;
 }
@@ -134,6 +155,19 @@ const handleCityChange = (event: Event) => {
 .created-by a:hover {
   text-decoration: underline;
 }
+.factors-list {
+  list-style: none;
+  margin-left: 0 !important;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.factors-list li {
+  display: flex;
+  align-items: center;
+}
 
 /* Mobile responsiveness */
 @media screen and (max-width: 768px) {
@@ -148,19 +182,6 @@ const handleCityChange = (event: Event) => {
     font-size: 1.25rem;
   }
 
-  .header-row .field {
-    width: 100%;
-  }
-
-  .header-row .select {
-    width: 100%;
-  }
-
-  .header-row .select select {
-    width: 100%;
-    font-size: 0.9rem;
-  }
-
   .about-component {
     height: auto;
   }
@@ -172,5 +193,58 @@ const handleCityChange = (event: Event) => {
   .created-by {
     font-size: 0.85rem;
   }
+}
+
+.city-select-inline-wrapper {
+  white-space: nowrap;
+}
+
+.city-select-wrapper {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.city-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--bulma-info-light, #eef6fc);
+  color: var(--bulma-info-dark, #1d4ed8);
+  font-weight: 600;
+  font-size: 0.95em;
+  font-family: inherit;
+  border: 1px solid rgba(62, 142, 208, 0.3);
+  border-radius: 4px;
+  padding: 0.1rem 1.35rem 0.1rem 0.45rem;
+  cursor: pointer;
+  line-height: inherit;
+  vertical-align: middle;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.city-select:hover {
+  background-color: #dbeafe;
+  border-color: rgba(62, 142, 208, 0.6);
+}
+
+.city-select:focus {
+  outline: none;
+  border-color: var(--bulma-info, #3e8ed0);
+  box-shadow: 0 0 0 2px rgba(62, 142, 208, 0.25);
+}
+
+.city-select-arrow {
+  position: absolute;
+  right: 0.4rem;
+  pointer-events: none;
+  color: var(--bulma-info, #3e8ed0);
+  display: flex;
+  align-items: center;
+  line-height: 1;
 }
 </style>
