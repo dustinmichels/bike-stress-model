@@ -1,6 +1,15 @@
+<script setup lang="ts">
+import { BookOpen, Download } from '@lucide/vue'
+
+const emit = defineEmits<{
+  openModal: []
+}>()
+
+</script>
+
 <template>
   <div class="box export-map-container">
-    <button class="button is-primary is-fullwidth" @click="openModal">
+    <button class="button is-primary is-fullwidth" @click="emit('openModal')">
       <span class="icon">
         <Download :size="16" />
       </span>
@@ -19,18 +28,6 @@
     </a>
   </div>
 </template>
-
-<script setup lang="ts">
-import { BookOpen, Download } from '@lucide/vue'
-
-const emit = defineEmits<{
-  openModal: []
-}>()
-
-const openModal = () => {
-  emit('openModal')
-}
-</script>
 
 <style scoped>
 .export-map-container {

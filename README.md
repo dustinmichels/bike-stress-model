@@ -1,19 +1,83 @@
-# Bike stress map
+# Bike Stress Model
 
-The version of the code associated with my advanced GIS class, which won best in show in 2026, see [adv-gis](https://github.com/dustinmichels/bike-stress-model/tree/adv-gis).
+A bike stress model and interactive map evaluating cycling infrastructure safety and comfort using OpenStreetMap data.
 
-## API
+The project consists of:
+
+- **Python Stress Model (Root)**: Downloads OSM network data using OSMnx, evaluates street segments across infrastructure factors, and exports GeoJSON / GeoPackage networks.
+- **Frontend (`frontend/`)**: Vue 3 + MapLibre web app for interactively exploring street networks with customizable weight sliders.
+
+---
+
+## Setup & Development
+
+Install dependencies with [uv](https://github.com/astral-sh/uv):
 
 ```sh
-curl -X POST "http://localhost:8000/getNetwork" \
-  -H "Content-Type: application/json" \
-  -d '{"city": "Somerville, Massachusetts, USA"}'
+uv sync
 ```
 
-Deployed to render:
+### Run the Pipeline
+
+Generate network data for configured municipalities:
 
 ```sh
-curl -X POST "https://bike-stress-model.onrender.com/getNetwork" \
-  -H "Content-Type: application/json" \
-  -d '{"city": "Somerville, Massachusetts, USA"}'
+uv run main
+```
+
+Outputs are written to `data/out/main/`.
+
+### Copy Data to Frontend
+
+Copy generated GeoJSON files into the frontend public directory:
+
+```sh
+./copy.sh
+```
+
+### Run Tests
+
+```sh
+uv run pytest tests/ -v
+```
+
+### Notebooks
+
+Jupyter notebooks are located in `notebooks/`. To clear notebook output cells before committing:
+
+```sh
+uv run --with jupyter ./clear_notebooks.sh
+```
+
+---
+
+## Model Inputs
+
+The model evaluates cycling stress across three active components (scored 0 for lowest stress, up to 4 for highest stress):
+
+1. **Separation Level (`src/stressmodel/separation_level.py`)**
+   - Assesses cycleway infrastructure type (`separate`, `track`, `lane_buffered`, `lane`, `share_busway`, `shared_lane`, `none`).
+   - Identifies buffered lanes via `cycleway:buffer` and `cycleway:separation` tags.
+
+2. **Speed Limit (`src/stressmodel/speed.py`)**
+   - Extracts posted speeds, falling back to 20 mph for residential streets when unmapped.
+   - Maps speed to stress tiers (≤20 mph: 0, ≤25 mph: 1, ≤30 mph: 2.5, ≤40 mph: 3, ≤50 mph: 3.5, >50 mph: 4).
+
+3. **Street Classification (`src/stressmodel/classification.py`)**
+   - Classifies OSM `highway` types into broad categories: `dedicated_path` (0), `residential` (2), `medium-capacity` (3), and `motorway` (4).
+
+A composite score is computed using the weighted average of these factors:
+
+$$\text{Composite Score} = 0.60 \times \text{Separation} + 0.20 \times \text{Speed} + 0.20 \times \text{Classification}$$
+
+---
+
+## Frontend Development
+
+See `frontend/README.md` for instructions on running the frontend:
+
+```sh
+cd frontend
+bun install
+bun run dev
 ```

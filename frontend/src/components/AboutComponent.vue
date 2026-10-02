@@ -1,3 +1,15 @@
+<script setup lang="ts">
+import { Bike, Car, ChevronDown, ExternalLink, Gauge, GitBranch, Shield } from '@lucide/vue'
+
+interface Props {
+  cities: readonly string[] | string[]
+}
+
+defineProps<Props>()
+
+const currCity = defineModel<string>('currCity', { required: true })
+</script>
+
 <template>
   <div class="box about-component">
     <!-- Title -->
@@ -13,12 +25,7 @@
         This map shows a composite safety score for each segment of the cycling network in
         <span class="city-select-inline-wrapper"
           ><span class="city-select-wrapper">
-            <select
-              :value="currCity"
-              @change="handleCityChange"
-              class="city-select"
-              aria-label="Select city"
-            >
+            <select v-model="currCity" class="city-select" aria-label="Select city">
               <option v-for="city in cities" :key="city" :value="city">{{ city }}, MA</option>
             </select>
             <span class="city-select-arrow" aria-hidden="true">
@@ -94,29 +101,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { Bike, Car, ChevronDown, ExternalLink, Gauge, GitBranch, Shield } from '@lucide/vue'
-
-// Props
-interface Props {
-  cities: string[]
-  currCity: string
-}
-
-const props = defineProps<Props>()
-
-// Emits
-const emit = defineEmits<{
-  'update:currCity': [value: string]
-}>()
-
-// Handle city change
-const handleCityChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  emit('update:currCity', target.value)
-}
-</script>
 
 <style scoped>
 .about-component {

@@ -1,15 +1,12 @@
 [project]
-name = "advgis-finalproject"
+name = "bike-stress-model"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
   "altair>=6.0.0",
-  "duckdb>=1.4.2",
-  "fastapi>=0.123.5",
   "geopandas>=1.1.1",
-  "kagglehub>=0.3.13",
   "lonboard>=0.13.0",
   "matplotlib>=3.10.7",
   "osmnx>=2.0.6",
@@ -17,9 +14,21 @@ dependencies = [
   "pyarrow>=22.0.0",
   "rapidfuzz>=3.14.3",
   "scikit-learn>=1.8.0",
+  "rich>=14.0.0",
   "tqdm>=4.67.1",
-  "uvicorn>=0.38.0",
 ]
 
 [dependency-groups]
 dev = ["jupyterlab>=4.5.0", "pandas-stubs>=2.3.2.250926", "pytest>=9.0.1", "pytest-mock>=3.15.1"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["main.py", "util.py", "src"]
+[tool.hatch.build]
+dev-mode-dirs = ["."]
+
+[project.scripts]
+main = "main:main"

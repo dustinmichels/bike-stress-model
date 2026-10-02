@@ -1,92 +1,7 @@
-<template>
-  <div class="box model-component">
-    <div class="header-row">
-      <h2 class="title is-4 is-flex is-align-items-center">
-        <SlidersHorizontal :size="20" class="mr-2 has-text-info" />
-        <span>Customize Weights</span>
-      </h2>
-
-      <div class="instruction-highlight">
-        <span class="icon-text">
-          <span class="icon has-text-info">
-            <Info :size="18" />
-          </span>
-          <span
-            >Drag the sliders to adjust the weights for each factor. Use the "eye" icon to toggle
-            visibility. Use the "settings" icon to adjust the classifications.</span
-          >
-        </span>
-      </div>
-    </div>
-
-    <div class="content">
-      <div class="calibration-container">
-        <!-- Calibration bar -->
-        <div class="calibration-bar" ref="barRef">
-          <div
-            v-for="(segment, index) in segments"
-            :key="segment.fieldName"
-            class="segment"
-            :class="{ dimmed: activeView !== null && activeView !== index }"
-            :style="{
-              width: segment.value + '%',
-              backgroundColor: segment.color,
-            }"
-          >
-            <span class="segment-label">
-              <component :is="getSegmentIcon(segment.fieldName)" :size="14" class="mr-1" />
-              {{ segment.displayName }} ({{ segment.value }}%)
-            </span>
-            <!-- Icons inside each segment -->
-            <div class="segment-icons">
-              <button
-                class="icon-button"
-                :class="{ active: activeView === index }"
-                @click="toggleView(index)"
-                :title="
-                  activeView === index ? 'Show all categories' : 'Show only ' + segment.displayName
-                "
-              >
-                <EyeOff v-if="activeView === index" :size="14" />
-                <Eye v-else :size="14" />
-              </button>
-              <button
-                class="icon-button"
-                @click="openSettings(index)"
-                :title="'Settings for ' + segment.displayName"
-              >
-                <Settings :size="14" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Handles (only show when no view is active) -->
-        <div v-if="activeView === null" class="handles">
-          <div
-            v-for="(segment, index) in segments.slice(0, -1)"
-            :key="'handle-' + index"
-            class="handle"
-            :style="{ left: getCumulativeWidth(index) + '%' }"
-            @mousedown="startDrag(index, $event)"
-            @touchstart="startDrag(index, $event)"
-          >
-            <div class="handle-grip">
-              <div class="grip-line"></div>
-              <div class="grip-line"></div>
-              <div class="grip-line"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { Car, Eye, EyeOff, Gauge, Info, Settings, Shield, SlidersHorizontal } from '@lucide/vue'
 import type { BikeInfrastructureModel, ModelWeights } from '@/types'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, useTemplateRef, watch } from 'vue'
 
 interface SegmentConfig {
   displayName: string
@@ -96,10 +11,10 @@ interface SegmentConfig {
   color: string
 }
 
-// Props
 interface Props {
   modelConfig: BikeInfrastructureModel
 }
+
 const getSegmentIcon = (fieldName: keyof ModelWeights) => {
   if (fieldName === 'separation_level') return Shield
   if (fieldName === 'speed') return Gauge
@@ -146,9 +61,22 @@ const segments = ref<SegmentConfig[]>([
   },
 ])
 
-const barRef = ref<HTMLElement | null>(null)
-const draggingIndex = ref<number | null>(null)
-const activeView = ref<number | null>(null) // Track which view is active (null = all)
+const barRef = useTemplateRef<HTMLElement>('barRef')
+const draggingIndex = shallowRef<number | null>(null)
+const activeView = shallowRef<number | null>(null) // Track which view is active (null = all)
+
+// Synchronize segments if weights change externally (e.g., reset) while not dragging
+watch(
+  weights,
+  (newWeights) => {
+    if (draggingIndex.value === null && activeView.value === null) {
+      if (segments.value[0]) segments.value[0].value = newWeights.separation_level
+      if (segments.value[1]) segments.value[1].value = newWeights.speed
+      if (segments.value[2]) segments.value[2].value = newWeights.busyness
+    }
+  },
+  { deep: true },
+)
 
 const snapToIncrement = (value: number, increment: number = 5): number => {
   return Math.round(value / increment) * increment
@@ -161,19 +89,19 @@ const getCumulativeWidth = (index: number): number => {
 const emitWeightChanges = () => {
   // If a view is active, set other weights to 0 but keep visual slider positions
   if (activeView.value !== null) {
-    const weights: ModelWeights = {
+    const emittedWeights: ModelWeights = {
       separation_level: activeView.value === 0 ? 100 : 0,
       speed: activeView.value === 1 ? 100 : 0,
       busyness: activeView.value === 2 ? 100 : 0,
     }
-    emit('weightsChanged', weights)
+    emit('weightsChanged', emittedWeights)
   } else {
-    const weights: ModelWeights = {
+    const emittedWeights: ModelWeights = {
       separation_level: segments.value[0]?.value ?? 0,
       speed: segments.value[1]?.value ?? 0,
       busyness: segments.value[2]?.value ?? 0,
     }
-    emit('weightsChanged', weights)
+    emit('weightsChanged', emittedWeights)
   }
 }
 
@@ -272,6 +200,91 @@ onUnmounted(() => {
   document.removeEventListener('touchend', handleMouseUp)
 })
 </script>
+
+<template>
+  <div class="box model-component">
+    <div class="header-row">
+      <h2 class="title is-4 is-flex is-align-items-center">
+        <SlidersHorizontal :size="20" class="mr-2 has-text-info" />
+        <span>Customize Weights</span>
+      </h2>
+
+      <div class="instruction-highlight">
+        <span class="icon-text">
+          <span class="icon has-text-info">
+            <Info :size="18" />
+          </span>
+          <span
+            >Drag the sliders to adjust the weights for each factor. Use the "eye" icon to toggle
+            visibility. Use the "settings" icon to adjust the classifications.</span
+          >
+        </span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="calibration-container">
+        <!-- Calibration bar -->
+        <div class="calibration-bar" ref="barRef">
+          <div
+            v-for="(segment, index) in segments"
+            :key="segment.fieldName"
+            class="segment"
+            :class="{ dimmed: activeView !== null && activeView !== index }"
+            :style="{
+              width: segment.value + '%',
+              backgroundColor: segment.color,
+            }"
+          >
+            <span class="segment-label">
+              <component :is="getSegmentIcon(segment.fieldName)" :size="14" class="mr-1" />
+              {{ segment.displayName }} ({{ segment.value }}%)
+            </span>
+            <!-- Icons inside each segment -->
+            <div class="segment-icons">
+              <button
+                class="icon-button"
+                :class="{ active: activeView === index }"
+                @click="toggleView(index)"
+                :title="
+                  activeView === index ? 'Show all categories' : 'Show only ' + segment.displayName
+                "
+              >
+                <EyeOff v-if="activeView === index" :size="14" />
+                <Eye v-else :size="14" />
+              </button>
+              <button
+                class="icon-button"
+                @click="openSettings(index)"
+                :title="'Settings for ' + segment.displayName"
+              >
+                <Settings :size="14" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Handles (only show when no view is active) -->
+        <div v-if="activeView === null" class="handles">
+          <div
+            v-for="(segment, index) in segments.slice(0, -1)"
+            :key="'handle-' + index"
+            class="handle"
+            :style="{ left: getCumulativeWidth(index) + '%' }"
+            @mousedown="startDrag(index, $event)"
+            @touchstart="startDrag(index, $event)"
+          >
+            <div class="handle-grip">
+              <div class="grip-line"></div>
+              <div class="grip-line"></div>
+              <div class="grip-line"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .model-component {

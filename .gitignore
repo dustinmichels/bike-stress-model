@@ -1,4 +1,24 @@
 *.qgz
+# Python & project data
+/data/
+/cache/
+.venv/
+
+# Notebooks
+notebooks/.ipynb_checkpoints/
+notebooks/cache/
+notebooks/*.csv
+
+# Python build and cache
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+.ruff_cache/
+
 
 # in case they accidentally get created up here
 node_modules

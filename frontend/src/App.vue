@@ -1,22 +1,67 @@
+<script setup lang="ts">
+import { useBikeModel } from '@/composables/useBikeModel'
+import { useCitySelection } from '@/composables/useCitySelection'
+import { defineAsyncComponent, shallowRef } from 'vue'
+import AboutComponent from './components/AboutComponent.vue'
+import ExportButtons from './components/ExportButtons.vue'
+import MapComponent from './components/Map/Map.vue'
+import ModelSliders from './components/ModelSliders.vue'
+import SettingsModal from './components/SettingsModal.vue'
+
+// Lazy-load heavy ExportMapModal containing mermaid to keep initial bundle lightweight
+const ExportMapModal = defineAsyncComponent(
+  () => import('./components/ExportModal/ExportMapModal.vue'),
+)
+
+// City selection & URL state management
+const { cities, currCity } = useCitySelection()
+
+// UI display state
+const settingsDataField = shallowRef<string | null>(null)
+const useGoodColors = shallowRef(true)
+const isExportModalOpen = shallowRef(false)
+
+// Bike model configuration, weights, and scored GeoJSON dataset
+const {
+  modelConfig,
+  geojsonData,
+  enrichedGeoJson,
+  loading,
+  error,
+  handleWeightsChanged,
+  handleUpdateScore,
+} = useBikeModel({
+  city: currCity,
+  useGoodColors,
+})
+
+const handleOpenSettings = (dataField: string) => {
+  settingsDataField.value = dataField
+}
+</script>
+
 <template>
   <div class="container is-fluid main-container">
     <div class="columns is-multiline top-row">
       <div class="column is-two-thirds-tablet is-full-mobile map-column">
         <MapComponent
-          :geojson-data="geojsonData"
+          :geojson-data="enrichedGeoJson"
+          :raw-geojson-data="geojsonData"
           :model-config="modelConfig"
           :use-good-colors="useGoodColors"
+          :loading="loading"
+          :error="error"
           @toggle-colors="useGoodColors = !useGoodColors"
         />
       </div>
       <div class="column is-one-third-tablet is-full-mobile right-column">
-        <AboutComponent :cities="cities" v-model:currCity="currCity" />
-        <ExportMap @open-modal="isExportModalOpen = true" />
+        <AboutComponent :cities="cities" v-model:curr-city="currCity" />
+        <ExportButtons @open-modal="isExportModalOpen = true" />
       </div>
     </div>
     <div class="columns bottom-row">
       <div class="column">
-        <ModelComponent
+        <ModelSliders
           :model-config="modelConfig"
           @weights-changed="handleWeightsChanged"
           @open-settings="handleOpenSettings"
@@ -32,129 +77,16 @@
       @update-score="handleUpdateScore"
     />
 
-    <!-- Export Map Modal -->
+    <!-- Export Map Modal (lazy loaded) -->
     <ExportMapModal
+      v-if="isExportModalOpen"
       :is-open="isExportModalOpen"
       :model-config="modelConfig"
-      :geojson-data="geojsonData"
+      :geojson-data="enrichedGeoJson"
       @close="isExportModalOpen = false"
     />
   </div>
 </template>
-
-<script setup lang="ts">
-import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
-import type { BikeInfrastructureModel, GeoJsonData, ModelWeights } from '@/types'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
-import AboutComponent from './components/AboutComponent.vue'
-import ExportMap from './components/ExportButtons.vue'
-import ExportMapModal from './components/ExportModal/ExportMapModal.vue'
-import MapComponent from './components/Map/Map.vue'
-import ModelComponent from './components/ModelSliders.vue'
-import SettingsModal from './components/SettingsModal.vue'
-
-// Cities configuration
-const cities = ref<string[]>(['Somerville', 'Cambridge', 'Everett', 'Malden'])
-
-// Parse optional city from URL query param (?city=malden,ma or ?city=malden)
-const parseCityFromUrl = (): string | null => {
-  if (typeof window === 'undefined') return null
-  const raw = new URLSearchParams(window.location.search).get('city')
-  if (!raw) return null
-  const cleaned = raw.split(/[,-]/)[0].trim().toLowerCase()
-  return cities.value.find((c) => c.toLowerCase() === cleaned) ?? null
-}
-
-const currCity = ref<string>(parseCityFromUrl() ?? 'Somerville')
-
-const onPopState = () => {
-  const cityFromUrl = parseCityFromUrl() ?? 'Somerville'
-  if (cityFromUrl !== currCity.value) {
-    currCity.value = cityFromUrl
-  }
-}
-
-// City to geojson file mapping
-const cityFileMap: Record<string, string> = {
-  Somerville: 'somerville_streets.geojson',
-  Cambridge: 'cambridge_streets.geojson',
-  Everett: 'everett_streets.geojson',
-  Malden: 'malden_streets.geojson',
-}
-
-// State
-const geojsonData = ref<GeoJsonData | null>(null)
-const modelConfig = ref<BikeInfrastructureModel>(
-  JSON.parse(JSON.stringify(BIKE_INFRASTRUCTURE_MODEL)),
-)
-
-const settingsDataField = ref<string | null>(null)
-const useGoodColors = ref(true)
-const isExportModalOpen = ref(false)
-
-// Load GeoJSON data for a specific city
-const loadGeoJsonForCity = async (city: string) => {
-  try {
-    const fileName = cityFileMap[city]
-    if (!fileName) {
-      console.error(`No geojson file configured for city: ${city}`)
-      return
-    }
-    const response = await fetch(import.meta.env.BASE_URL + fileName)
-    if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
-    const data = await response.json()
-    geojsonData.value = data
-  } catch (e) {
-    console.error(`Error loading GeoJSON for ${city}:`, e)
-  }
-}
-
-// Load GeoJSON data on mount and listen to back/forward browser navigation
-onMounted(() => {
-  loadGeoJsonForCity(currCity.value)
-  window.addEventListener('popstate', onPopState)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('popstate', onPopState)
-})
-
-// Watch for city changes and reload geojson + sync URL
-watch(currCity, (newCity) => {
-  loadGeoJsonForCity(newCity)
-  // Avoid pushing a duplicate history entry if URL already reflects newCity (e.g. popstate)
-  if (parseCityFromUrl() !== newCity) {
-    const params = new URLSearchParams(window.location.search)
-    params.set('city', `${newCity.toLowerCase()},ma`)
-    const queryString = `?${params.toString().replace(/%2C/gi, ',')}`
-    window.history.pushState(
-      { city: newCity },
-      '',
-      `${window.location.pathname}${queryString}${window.location.hash}`,
-    )
-  }
-})
-// Handle weight changes from ModelComponent
-const handleWeightsChanged = (weights: ModelWeights) => {
-  // Update weights in modelConfig
-  modelConfig.value.separation_level.weight = weights.separation_level
-  modelConfig.value.speed_limit.weight = weights.speed
-  modelConfig.value.street_classification.weight = weights.busyness
-}
-
-// Handle opening settings modal
-const handleOpenSettings = (dataField: string) => {
-  settingsDataField.value = dataField
-}
-
-// Handle score updates from SettingsModal
-const handleUpdateScore = (field: string, category: string, score: number) => {
-  const fieldConfig = modelConfig.value[field as keyof BikeInfrastructureModel]
-  if (fieldConfig?.categories[category]) {
-    fieldConfig.categories[category].score = score
-  }
-}
-</script>
 
 <style scoped>
 .main-container {

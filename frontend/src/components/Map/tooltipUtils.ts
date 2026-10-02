@@ -1,13 +1,18 @@
 import type { GeoJsonFeature } from '@/types'
-import { icons } from 'lucide'
-import { Popup, type LngLatLike, type Map as MapLibreMap } from 'maplibre-gl'
+import { Car, Gauge, Layers, MapPin, Shield, type IconNode } from 'lucide'
 import { badColors, MAX_SCORE, scoreToColor } from '@/utils/colorScale'
 
-const renderLucideSvg = (
-  iconDef: (typeof icons)[keyof typeof icons],
-  size = 14,
-  color = 'currentColor',
-): string => {
+export const escapeHtml = (value: unknown): string => {
+  if (value === null || value === undefined) return ''
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+const renderLucideSvg = (iconDef: IconNode, size = 14, color = 'currentColor'): string => {
   const children = iconDef
     .map(([tag, attrs]) => {
       const attrStr = Object.entries(attrs)
@@ -81,10 +86,12 @@ const createFieldWithScore = (
   iconSvg?: string,
   colors: string[] = badColors,
   maxScore = MAX_SCORE,
+  isRawHtml = false,
 ): string => {
-  const formattedValue = typeof value === 'number' ? value.toFixed(2) : value
+  const formattedValue =
+    typeof value === 'number' ? value.toFixed(2) : isRawHtml ? String(value) : escapeHtml(value)
   let html = `<div style="margin-bottom: 12px;">
-    <div style="display: flex; align-items: center; margin-bottom: 2px;">${iconSvg ?? ''}<strong>${label}:</strong>&nbsp;<span>${formattedValue}</span></div>`
+    <div style="display: flex; align-items: center; margin-bottom: 2px;">${iconSvg ?? ''}<strong>${escapeHtml(label)}:</strong>&nbsp;<span>${formattedValue}</span></div>`
 
   if (scoreValue !== undefined) {
     html += createScoreBar(scoreValue, colors, maxScore)
@@ -111,12 +118,12 @@ export const createFeaturePopup = (
 
   // Name
   if ('name' in props) {
-    html += `<div style="margin-bottom: 12px; display: flex; align-items: center;">${renderLucideSvg(icons.MapPin, 14, '#4a4a4a')}<strong>Name:</strong>&nbsp;<span>${props.name}</span></div>`
+    html += `<div style="margin-bottom: 12px; display: flex; align-items: center;">${renderLucideSvg(MapPin, 14, '#4a4a4a')}<strong>Name:</strong>&nbsp;<span>${escapeHtml(props.name)}</span></div>`
   }
 
   // Lanes
   if ('lanes_int' in props) {
-    html += `<div style="margin-bottom: 12px;"><strong>Lanes:</strong>&nbsp;<span>${props.lanes_int}</span></div>`
+    html += `<div style="margin-bottom: 12px;"><strong>Lanes:</strong>&nbsp;<span>${escapeHtml(props.lanes_int)}</span></div>`
   }
 
   // Separation Level with score
@@ -125,7 +132,7 @@ export const createFeaturePopup = (
       'Separation Level',
       props.separation_level,
       props.separation_level_score ?? null,
-      renderLucideSvg(icons.Shield, 14, '#3273dc'),
+      renderLucideSvg(Shield, 14, '#3273dc'),
       colors,
       maxScore,
     )
@@ -137,7 +144,7 @@ export const createFeaturePopup = (
       'Street Classification',
       props.street_classification,
       props.street_classification_score ?? null,
-      renderLucideSvg(icons.Car, 14, '#e67e22'),
+      renderLucideSvg(Car, 14, '#e67e22'),
       colors,
       maxScore,
     )
@@ -153,16 +160,17 @@ export const createFeaturePopup = (
     Number(rawSpeed) > 0
 
   const speedDisplay = hasSpeed
-    ? `${rawSpeed} mph`
+    ? `${escapeHtml(rawSpeed)} mph`
     : `<span style="font-style: italic; color: #888;">unknown</span>`
 
   html += createFieldWithScore(
     'Max Speed',
     speedDisplay,
     hasSpeed ? (props.maxspeed_int_score ?? null) : null,
-    renderLucideSvg(icons.Gauge, 14, '#48c774'),
+    renderLucideSvg(Gauge, 14, '#48c774'),
     colors,
     maxScore,
+    true,
   )
 
   // Composite Score with bar chart
@@ -175,7 +183,7 @@ export const createFeaturePopup = (
           ? parseFloat(String(rawScore))
           : null
 
-    const compositeIcon = renderLucideSvg(icons.Layers, 14, '#363636')
+    const compositeIcon = renderLucideSvg(Layers, 14, '#363636')
     if (numScore !== null && !isNaN(numScore)) {
       html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.1);">
         <div style="display: flex; align-items: center; margin-bottom: 2px;">${compositeIcon}<strong>Composite Score:</strong>&nbsp;<span>${numScore.toFixed(2)}</span></div>`
@@ -192,73 +200,4 @@ export const createFeaturePopup = (
 
   html += '</div>'
   return html
-}
-
-/**
- * Displays a popup on a MapLibre map based on feature properties
- * @param map - The MapLibre Map instance
- * @param feature - The GeoJSON feature
- * @param lngLat - Coordinates where the popup should appear
- * @param colors - Color palette to use for bar color
- * @param maxScore - Maximum possible score
- */
-export const showFeaturePopup = (
-  map: MapLibreMap,
-  feature: GeoJsonFeature,
-  lngLat: LngLatLike,
-  colors: string[] = badColors,
-  maxScore = MAX_SCORE,
-): Popup | null => {
-  const popupContent = createFeaturePopup(feature, colors, maxScore)
-  if (!popupContent) return null
-  return new Popup({ maxWidth: '320px' }).setLngLat(lngLat).setHTML(popupContent).addTo(map)
-}
-
-/**
- * Configuration options for feature popups
- */
-export interface PopupOptions {
-  excludeKeys?: string[]
-  includeKeys?: string[]
-  formatters?: Record<string, (value: unknown) => string>
-}
-
-/**
- * Creates a customized popup with additional options
- * @param feature - The GeoJSON feature
- * @param options - Popup configuration options
- * @returns HTML string for the popup
- */
-export const createCustomPopup = (feature: GeoJsonFeature, options: PopupOptions = {}): string => {
-  if (!feature.properties) return ''
-
-  const { excludeKeys = [], includeKeys, formatters = {} } = options
-
-  let entries = Object.entries(feature.properties)
-
-  // Filter by includeKeys if provided
-  if (includeKeys) {
-    entries = entries.filter(([key]) => includeKeys.includes(key))
-  }
-
-  // Exclude specified keys and internal properties
-  entries = entries.filter(([key]) => !key.startsWith('_') && !excludeKeys.includes(key))
-
-  return entries
-    .map(([key, value]) => {
-      // Handle null values
-      if (value === null || value === undefined) {
-        return `<strong>${key}:</strong> <span style="font-style: italic; color: #999;">No data</span>`
-      }
-
-      // Use custom formatter if available
-      const formattedValue = formatters[key]
-        ? formatters[key](value)
-        : typeof value === 'number'
-          ? value.toFixed(2)
-          : value
-
-      return `<strong>${key}:</strong> ${formattedValue}`
-    })
-    .join('<br>')
 }

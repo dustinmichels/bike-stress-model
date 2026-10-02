@@ -13,4 +13,23 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1500,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'vendor-maplibre',
+              test: /node_modules[\\/]maplibre-gl/,
+            },
+            {
+              name: 'vendor-vue',
+              test: /node_modules[\\/](vue|@vue)/,
+            },
+          ],
+        },
+      },
+    },
+  },
 })

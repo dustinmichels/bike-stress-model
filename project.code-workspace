@@ -5,9 +5,6 @@
       "name": "[root]"
     },
     {
-      "path": "backend"
-    },
-    {
       "path": "frontend"
     }
   ],

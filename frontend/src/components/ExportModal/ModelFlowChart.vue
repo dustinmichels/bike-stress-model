@@ -1,24 +1,12 @@
-<template>
-  <div class="flowchart-container">
-    <div ref="mermaidContainer" class="mermaid-wrapper"></div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import type { BikeInfrastructureModel } from '@/types'
-import mermaid from 'mermaid'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, useTemplateRef, watch } from 'vue'
 
 const props = defineProps<{
   modelConfig: BikeInfrastructureModel
 }>()
 
-const mermaidContainer = ref<HTMLElement>()
-
-// Map speed limit categories to display labels
-const getSpeedLimitDisplay = (category: string, displayLabel: string): string => {
-  return displayLabel
-}
+const mermaidContainer = useTemplateRef<HTMLElement>('mermaidContainer')
 
 // Generate the mermaid diagram syntax from model config
 const generateMermaidSyntax = (): string => {
@@ -26,20 +14,20 @@ const generateMermaidSyntax = (): string => {
 
   // Build separation level box
   let sepContent = '<b>SEPARATION LEVEL</b><br/>────────────────'
-  Object.entries(separation_level.categories).forEach(([key, value]) => {
+  Object.entries(separation_level.categories).forEach(([, value]) => {
     sepContent += `<br/>${value.displayLabel}: ${value.score}`
   })
 
   // Build street classification box
   let streetContent = '<b>STREET CLASSIFICATION</b><br/>────────────────'
-  Object.entries(street_classification.categories).forEach(([key, value]) => {
+  Object.entries(street_classification.categories).forEach(([, value]) => {
     streetContent += `<br/>${value.displayLabel}: ${value.score}`
   })
 
   // Build speed limit box
   let speedContent = '<b>SPEED LIMIT</b><br/>────────────────'
   Object.entries(speed_limit.categories).forEach(([key, value]) => {
-    speedContent += `<br/>${getSpeedLimitDisplay(key, value.displayLabel)}: ${value.score}`
+    speedContent += `<br/>${value.displayLabel}: ${value.score}`
   })
 
   // Build composite score box
@@ -72,7 +60,7 @@ const renderMermaid = async () => {
   if (!mermaidContainer.value) return
 
   try {
-    // Initialize mermaid
+    const { default: mermaid } = await import('mermaid')
     mermaid.initialize({
       startOnLoad: false,
       theme: 'default',
@@ -93,7 +81,9 @@ const renderMermaid = async () => {
     const { svg } = await mermaid.render(id, syntax)
 
     // Insert the SVG into the container
-    mermaidContainer.value.innerHTML = svg
+    if (mermaidContainer.value) {
+      mermaidContainer.value.innerHTML = svg
+    }
   } catch (error) {
     console.error('Error rendering Mermaid diagram:', error)
     if (mermaidContainer.value) {
@@ -110,6 +100,12 @@ onMounted(() => {
 // Re-render when model config changes
 watch(() => props.modelConfig, renderMermaid, { deep: true })
 </script>
+
+<template>
+  <div class="flowchart-container">
+    <div ref="mermaidContainer" class="mermaid-wrapper"></div>
+  </div>
+</template>
 
 <style scoped>
 .flowchart-container {

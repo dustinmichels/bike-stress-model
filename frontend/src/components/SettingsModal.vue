@@ -1,86 +1,13 @@
-<template>
-  <div v-if="dataField" class="modal is-active">
-    <div class="modal-background" @click="closeModal"></div>
-    <div class="modal-card">
-      <header class="modal-card-head">
-        <p class="modal-card-title is-flex is-align-items-center">
-          <component :is="getFieldIcon(dataField)" :size="20" class="mr-2" />
-          <span>Settings: {{ displayName }}</span>
-        </p>
-        <button class="delete" aria-label="close" @click="closeModal"></button>
-      </header>
-      <section class="modal-card-body">
-        <div v-if="parameterData">
-          <p class="mb-4">{{ parameterData.notes }}</p>
-
-          <div class="is-flex is-justify-content-flex-end mb-3">
-            <button class="button is-small reset-button" @click="resetScores">
-              <span class="icon is-small">
-                <RotateCcw :size="14" />
-              </span>
-              <span>Reset All</span>
-            </button>
-          </div>
-
-          <!-- Compact Table-Style Categories -->
-          <div class="categories-table">
-            <div v-for="(category, key) in localCategories" :key="key" class="category-row">
-              <div class="category-left">
-                <strong class="category-name">{{ formatCategoryName(key) }}</strong>
-                <p class="category-notes">{{ category.notes }}</p>
-                <img v-if="category.img" :src="category.img" alt="" class="category-img" />
-              </div>
-              <div class="category-right">
-                <div class="slider-control">
-                  <input
-                    type="range"
-                    min="0"
-                    :max="MAX_SCORE"
-                    step="0.5"
-                    v-model.number="category.score"
-                    class="slider"
-                    :style="getSliderStyle(category.score)"
-                    @input="onScoreChange(key, $event)"
-                  />
-                  <span class="score-value">{{ category.score.toFixed(1) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <a
-            v-if="parameterData.link"
-            :href="parameterData.link"
-            target="_blank"
-            class="button is-link is-small mt-4 learn-more-button"
-          >
-            <span class="icon is-small">
-              <ExternalLink :size="14" />
-            </span>
-            <span>Learn More on OpenStreetMap Wiki</span>
-          </a>
-        </div>
-      </section>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { Car, ExternalLink, Gauge, RotateCcw, Settings, Shield } from '@lucide/vue'
 import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
 import { MAX_SCORE } from '@/utils/colorScale'
 import type { BikeInfrastructureModel } from '@/types'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 
 interface Props {
   dataField: string | null
   modelConfig: BikeInfrastructureModel
-}
-const getFieldIcon = (field: string | null) => {
-  if (field === 'separation_level') return Shield
-  if (field === 'speed_limit') return Gauge
-  if (field === 'street_classification') return Car
-  return Settings
 }
 
 const props = defineProps<Props>()
@@ -90,18 +17,15 @@ const emit = defineEmits<{
   updateScore: [field: string, category: string, score: number]
 }>()
 
-// Basic color palette
-const colors = {
-  primary: '#3273dc',
-  dark: '#363636',
-  light: '#f5f5f5',
-  border: '#dbdbdb',
+const getFieldIcon = (field: string | null) => {
+  if (field === 'separation_level') return Shield
+  if (field === 'speed_limit') return Gauge
+  if (field === 'street_classification') return Car
+  return Settings
 }
 
-// Local state for categories with scores
-const localCategories = ref<Record<string, any>>({})
 
-// Computed property to get the parameter data
+// Computed property to get the parameter data directly from props
 const parameterData = computed(() => {
   if (!props.dataField) return null
   return props.modelConfig[props.dataField as keyof BikeInfrastructureModel]
@@ -118,17 +42,6 @@ const displayName = computed(() => {
   return displayNames[props.dataField] || props.dataField
 })
 
-// Initialize local categories when dataField changes
-watch(
-  () => props.dataField,
-  () => {
-    if (parameterData.value?.categories) {
-      localCategories.value = JSON.parse(JSON.stringify(parameterData.value.categories))
-    }
-  },
-  { immediate: true },
-)
-
 // Helper function to format category names nicely
 const formatCategoryName = (key: string): string => {
   return key.replace(/_/g, ' ').replace(/-/g, ' ')
@@ -136,16 +49,10 @@ const formatCategoryName = (key: string): string => {
 
 // Function to get color based on score (0 = green, MAX_SCORE = red)
 const getScoreColor = (score: number): string => {
-  // Normalize score to 0-1 range
   const normalized = score / MAX_SCORE
-
-  // Interpolate between green (0) and red (4)
-  // Green: rgb(34, 197, 94) - #22c55e
-  // Red: rgb(239, 68, 68) - #ef4444
   const r = Math.round(34 + (239 - 34) * normalized)
   const g = Math.round(197 + (68 - 197) * normalized)
   const b = Math.round(94 + (68 - 94) * normalized)
-
   return `rgb(${r}, ${g}, ${b})`
 }
 
@@ -161,44 +68,32 @@ const getSliderStyle = (score: number) => {
 const onScoreChange = (categoryKey: string, event: Event) => {
   const target = event.target as HTMLInputElement
   const newScore = parseFloat(target.value)
-
-  if (props.dataField) {
+  if (props.dataField && !isNaN(newScore)) {
     emit('updateScore', props.dataField, categoryKey, newScore)
   }
 }
 
-// Reset all scores to original values
+// Reset all scores for the active field to original default values
 const resetScores = () => {
   if (!props.dataField) return
-
   const originalData =
     BIKE_INFRASTRUCTURE_MODEL[props.dataField as keyof typeof BIKE_INFRASTRUCTURE_MODEL]
   if (originalData?.categories) {
-    localCategories.value = JSON.parse(JSON.stringify(originalData.categories))
-
-    // Emit reset events for all categories
-    Object.keys(localCategories.value).forEach((categoryKey) => {
-      const originalScore = originalData.categories[categoryKey]?.score
-      if (originalScore !== undefined) {
-        emit('updateScore', props.dataField!, categoryKey, originalScore)
-      }
-    })
+    for (const [categoryKey, category] of Object.entries(originalData.categories)) {
+      emit('updateScore', props.dataField, categoryKey, category.score)
+    }
   }
 }
 
-// Close modal
 const closeModal = () => {
   emit('close')
 }
 
-// Handle escape key
 const handleEscape = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
-    closeModal()
-  }
+  if (event.key !== 'Escape' || !props.dataField) return
+  closeModal()
 }
 
-// Add/remove event listener
 onMounted(() => {
   window.addEventListener('keydown', handleEscape)
 })
@@ -208,9 +103,82 @@ onUnmounted(() => {
 })
 </script>
 
+<template>
+  <Teleport to="body">
+    <div v-if="dataField" class="modal is-active">
+      <div class="modal-background" @click="closeModal"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title is-flex is-align-items-center">
+            <component :is="getFieldIcon(dataField)" :size="20" class="mr-2" />
+            <span>Settings: {{ displayName }}</span>
+          </p>
+          <button class="delete" aria-label="close" @click="closeModal"></button>
+        </header>
+        <section class="modal-card-body">
+          <div v-if="parameterData">
+            <p class="mb-4">{{ parameterData.notes }}</p>
+
+            <div class="is-flex is-justify-content-flex-end mb-3">
+              <button class="button is-small reset-button" @click="resetScores">
+                <span class="icon is-small">
+                  <RotateCcw :size="14" />
+                </span>
+                <span>Reset All</span>
+              </button>
+            </div>
+
+            <!-- Compact Table-Style Categories -->
+            <div class="categories-table">
+              <div
+                v-for="(category, key) in parameterData.categories"
+                :key="key"
+                class="category-row"
+              >
+                <div class="category-left">
+                  <strong class="category-name">{{ formatCategoryName(String(key)) }}</strong>
+                  <p class="category-notes">{{ category.notes }}</p>
+                  <img v-if="category.img" :src="category.img" alt="" class="category-img" />
+                </div>
+                <div class="category-right">
+                  <div class="slider-control">
+                    <input
+                      type="range"
+                      min="0"
+                      :max="MAX_SCORE"
+                      step="0.5"
+                      :value="category.score"
+                      class="slider"
+                      :style="getSliderStyle(category.score)"
+                      @input="onScoreChange(String(key), $event)"
+                    />
+                    <span class="score-value">{{ category.score.toFixed(1) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <a
+              v-if="parameterData.link"
+              :href="parameterData.link"
+              target="_blank"
+              class="button is-link is-small mt-4 learn-more-button"
+            >
+              <span class="icon is-small">
+                <ExternalLink :size="14" />
+              </span>
+              <span>Learn More on OpenStreetMap Wiki</span>
+            </a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </Teleport>
+</template>
+
 <style scoped>
 .modal-card-head {
-  background-color: v-bind('colors.primary');
+  background-color: #3273dc;
   border-bottom: none;
 }
 
@@ -231,7 +199,7 @@ onUnmounted(() => {
 }
 
 .reset-button {
-  background-color: v-bind('colors.primary');
+  background-color: #3273dc;
   color: white;
   border: none;
 }
@@ -243,7 +211,7 @@ onUnmounted(() => {
 
 /* Compact Table-Style Categories */
 .categories-table {
-  border: 1px solid v-bind('colors.border');
+  border: 1px solid #dbdbdb;
   border-radius: 6px;
   overflow: hidden;
 }
@@ -252,7 +220,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 1rem;
-  border-bottom: 1px solid v-bind('colors.border');
+  border-bottom: 1px solid #dbdbdb;
   background-color: white;
   transition: background-color 0.2s;
 }
@@ -262,7 +230,7 @@ onUnmounted(() => {
 }
 
 .category-row:hover {
-  background-color: v-bind('colors.light');
+  background-color: #f5f5f5;
 }
 
 .category-left {
@@ -272,7 +240,7 @@ onUnmounted(() => {
 
 .category-name {
   display: block;
-  color: v-bind('colors.dark');
+  color: #363636;
   font-size: 0.95rem;
   text-transform: capitalize;
   margin-bottom: 0.25rem;
@@ -318,7 +286,7 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--thumb-color, v-bind('colors.primary'));
+  background: var(--thumb-color, #3273dc);
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -334,7 +302,7 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--thumb-color, v-bind('colors.primary'));
+  background: var(--thumb-color, #3273dc);
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -348,15 +316,15 @@ onUnmounted(() => {
 
 .score-value {
   font-weight: 600;
-  color: v-bind('colors.dark');
+  color: #363636;
   font-size: 1rem;
   min-width: 2.5rem;
   text-align: right;
 }
 
 .learn-more-button {
-  background-color: v-bind('colors.primary');
-  border-color: v-bind('colors.primary');
+  background-color: #3273dc;
+  border-color: #3273dc;
 }
 
 .learn-more-button:hover {

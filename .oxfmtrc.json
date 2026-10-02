@@ -6,11 +6,10 @@
   "ignorePatterns": [
     "*.geojson",
     "frontend/public/**",
-    "backend/**",
+    "data/**",
     "deployed-charts/**",
     "project.code-workspace",
-    "*.yaml",
-    "*.yml",
+    "notebooks/",
     ".github/**"
   ]
 }

@@ -1,43 +1,3 @@
-<template>
-  <div class="modal" :class="{ 'is-active': isOpen }">
-    <div class="modal-background" @click="close"></div>
-    <div class="modal-card large-modal">
-      <header class="modal-card-head">
-        <p class="modal-card-title is-flex is-align-items-center">
-          <FileDown :size="20" class="mr-2" />
-          <span>Export Map</span>
-        </p>
-        <button class="delete" aria-label="close" @click="close"></button>
-      </header>
-      <section class="modal-card-body">
-        <div class="content">
-          <h3 class="title is-5 is-flex is-align-items-center">
-            <Workflow :size="18" class="mr-2 has-text-info" />
-            <span>Bike Infrastructure Scoring Model</span>
-          </h3>
-
-          <!-- Mermaid Flowchart -->
-          <ModelFlowChart v-if="modelConfig" :model-config="modelConfig" />
-        </div>
-      </section>
-      <footer class="modal-card-foot">
-        <button class="button is-success" @click="exportGeojson">
-          <span class="icon">
-            <FileCode :size="16" />
-          </span>
-          <span>Download GeoJSON</span>
-        </button>
-        <button class="button is-primary" @click="exportDiagram">
-          <span class="icon">
-            <FileImage :size="16" />
-          </span>
-          <span>Save Diagram as PNG</span>
-        </button>
-      </footer>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { FileCode, FileDown, FileImage, Workflow } from '@lucide/vue'
 import type { BikeInfrastructureModel, GeoJsonData } from '@/types'
@@ -173,6 +133,48 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleEscape)
 })
 </script>
+
+<template>
+  <Teleport to="body">
+    <div v-if="isOpen" class="modal is-active">
+      <div class="modal-background" @click="close"></div>
+      <div class="modal-card large-modal">
+        <header class="modal-card-head">
+          <p class="modal-card-title is-flex is-align-items-center">
+            <FileDown :size="20" class="mr-2" />
+            <span>Export Map</span>
+          </p>
+          <button class="delete" aria-label="close" @click="close"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="content">
+            <h3 class="title is-5 is-flex is-align-items-center">
+              <Workflow :size="18" class="mr-2 has-text-info" />
+              <span>Bike Infrastructure Scoring Model</span>
+            </h3>
+
+            <!-- Mermaid Flowchart -->
+            <ModelFlowChart v-if="modelConfig" :model-config="modelConfig" />
+          </div>
+        </section>
+        <footer class="modal-card-foot">
+          <button class="button is-success" @click="exportGeojson">
+            <span class="icon">
+              <FileCode :size="16" />
+            </span>
+            <span>Download GeoJSON</span>
+          </button>
+          <button class="button is-primary" @click="exportDiagram">
+            <span class="icon">
+              <FileImage :size="16" />
+            </span>
+            <span>Save Diagram as PNG</span>
+          </button>
+        </footer>
+      </div>
+    </div>
+  </Teleport>
+</template>
 
 <style scoped>
 .modal {

@@ -39,11 +39,10 @@ export interface StreetProperties {
   name?: string
 
   // Computed scores (will be calculated dynamically)
-  separation_level_score?: number
-  street_classification_score?: number
-  maxspeed_int_score?: number
-  composite_score?: number
-
+  separation_level_score?: number | null
+  street_classification_score?: number | null
+  maxspeed_int_score?: number | null
+  composite_score?: number | null
   [key: string]: unknown
 }
 

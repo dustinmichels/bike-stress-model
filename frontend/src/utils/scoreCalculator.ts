@@ -1,5 +1,18 @@
 import type { BikeInfrastructureModel, ModelWeights, StreetProperties } from '@/types'
 
+const SEPARATION_LEVEL_ALIASES: Record<string, string> = {
+  separation: 'separate',
+  no: 'none',
+}
+
+const warnedUnknownCategories = new Set<string>()
+
+const warnOnce = (message: string) => {
+  if (!warnedUnknownCategories.has(message)) {
+    warnedUnknownCategories.add(message)
+    console.warn(message)
+  }
+}
 /**
  * Calculate the separation level score for a street
  * Returns null if data is missing
@@ -8,17 +21,18 @@ export const calculateSeparationScore = (
   properties: StreetProperties,
   modelConfig: BikeInfrastructureModel,
 ): number | null => {
-  const category = properties.separation_level
+  const rawCategory = properties.separation_level
 
   // Return null if data is missing
-  if (!category) {
+  if (!rawCategory) {
     return null
   }
 
+  const category = SEPARATION_LEVEL_ALIASES[rawCategory] ?? rawCategory
   const score = modelConfig.separation_level.categories[category]?.score
 
   if (score === undefined) {
-    console.warn(`Unknown separation_level category '${category}'`)
+    warnOnce(`Unknown separation_level category '${category}'`)
     return null
   }
 
@@ -43,7 +57,7 @@ export const calculateStreetClassificationScore = (
   const score = modelConfig.street_classification.categories[category]?.score
 
   if (score === undefined) {
-    console.warn(`Unknown street_classification category '${category}'`)
+    warnOnce(`Unknown street_classification category '${category}'`)
     return null
   }
 
@@ -79,7 +93,7 @@ export const calculateSpeedScore = (
   const speed = typeof maxspeedValue === 'number' ? maxspeedValue : parseInt(String(maxspeedValue))
 
   if (isNaN(speed)) {
-    console.warn(`Invalid maxspeed_int value '${maxspeedValue}'`)
+    warnOnce(`Invalid maxspeed_int value '${maxspeedValue}'`)
     return null
   }
 
@@ -87,7 +101,7 @@ export const calculateSpeedScore = (
   const score = modelConfig.speed_limit.categories[category]?.score
 
   if (score === undefined) {
-    console.warn(`Unknown speed category '${category}'`)
+    warnOnce(`Unknown speed category '${category}'`)
     return null
   }
 
@@ -139,7 +153,6 @@ export const calculateCompositeScore = (
 /**
  * Calculate all scores for a single street feature
  */
-let calculationCount = 0
 
 export const calculateAllScores = (
   properties: StreetProperties,
@@ -160,30 +173,6 @@ export const calculateAllScores = (
     speedScore,
     weights,
   )
-
-  // Debug logging for the first 5 features
-  if (calculationCount < 5) {
-    console.log(`Calculation ${calculationCount + 1}:`, {
-      input: {
-        separation_level: properties.separation_level,
-        street_classification: properties.street_classification,
-        maxspeed_int: properties.maxspeed_int,
-      },
-      intermediateScores: {
-        separation: separationScore,
-        streetClass: streetClassScore,
-        speed: speedScore,
-      },
-      weights,
-      finalComposite: compositeScore,
-      missingData: {
-        separation: separationScore === null,
-        streetClass: streetClassScore === null,
-        speed: speedScore === null,
-      },
-    })
-    calculationCount++
-  }
 
   return {
     separation_level_score: separationScore,

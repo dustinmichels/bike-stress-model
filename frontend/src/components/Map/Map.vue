@@ -1,75 +1,7 @@
-<template>
-  <div class="box map-component">
-    <div class="notification is-danger is-light is-flex is-align-items-center" v-if="error">
-      <AlertCircle :size="18" class="mr-2" />
-      <span>{{ error }}</span>
-    </div>
-
-    <div class="notification is-info is-light is-flex is-align-items-center" v-if="loading">
-      <Loader2 :size="18" class="mr-2 spin-icon" />
-      <span>Loading map data...</span>
-    </div>
-
-    <div ref="mapContainer" class="map-container"></div>
-
-    <!-- Legend -->
-    <div class="legend">
-      <div class="legend-title is-flex is-align-items-center">
-        <Layers :size="14" class="mr-1" />
-        <span>Composite Score</span>
-      </div>
-
-      <div class="legend-colors">
-        <div
-          v-for="(color, index) in legendColors"
-          :key="index"
-          :style="{ backgroundColor: color }"
-          class="legend-color-block"
-        ></div>
-      </div>
-
-      <div class="legend-labels">
-        <span v-for="n in legendColors.length" :key="n - 1">{{ n - 1 }}</span>
-      </div>
-
-      <!-- Missing data indicator -->
-      <div class="legend-missing">
-        <div class="legend-missing-block"></div>
-        <span class="legend-missing-label">No data</span>
-      </div>
-    </div>
-
-    <!-- Color Scale Toggle -->
-    <div class="color-toggle">
-      <div class="toggle-container">
-        <span
-          class="toggle-label is-inline-flex is-align-items-center"
-          :class="{ active: useGoodColors }"
-        >
-          <ShieldCheck :size="14" class="mr-1" />
-          <span>Safety</span>
-        </span>
-        <label class="switch">
-          <input type="checkbox" :checked="!useGoodColors" @change="$emit('toggleColors')" />
-          <span class="slider"></span>
-        </label>
-        <span
-          class="toggle-label is-inline-flex is-align-items-center"
-          :class="{ active: !useGoodColors }"
-        >
-          <AlertTriangle :size="14" class="mr-1" />
-          <span>Risk</span>
-        </span>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { AlertCircle, AlertTriangle, Layers, Loader2, ShieldCheck } from '@lucide/vue'
 import type { BikeInfrastructureModel, GeoJsonData, GeoJsonFeature } from '@/types'
-import { badColors, goodColors, MISSING_DATA_COLOR, scoreToColor } from '@/utils/colorScale'
-import { calculateAllScores } from '@/utils/scoreCalculator'
+import { badColors, goodColors, MISSING_DATA_COLOR } from '@/utils/colorScale'
 import {
   LngLatBounds,
   Map as MapLibreMap,
@@ -83,125 +15,42 @@ import {
 import type { FeatureCollection } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef, watch } from 'vue'
 import { createFeaturePopup } from './tooltipUtils'
 
 setWorkerUrl(workerUrl)
-// Props
+
 interface Props {
   geojsonData: GeoJsonData | null
+  rawGeojsonData?: GeoJsonData | null
   modelConfig: BikeInfrastructureModel
   useGoodColors?: boolean
+  loading?: boolean
+  error?: string | null
 }
+
 const props = withDefaults(defineProps<Props>(), {
   useGoodColors: true,
+  loading: false,
+  error: null,
 })
 
-// Extract weights from modelConfig
-const modelWeights = computed(() => ({
-  separation_level: props.modelConfig.separation_level.weight,
-  speed: props.modelConfig.speed_limit.weight,
-  busyness: props.modelConfig.street_classification.weight,
-}))
-
-// Emits
 const emit = defineEmits<{
   toggleColors: []
 }>()
 
-// Refs
-const mapContainer = ref<HTMLElement | null>(null)
-const error = ref('')
-const loading = ref(false)
+const mapContainer = useTemplateRef<HTMLElement>('mapContainer')
 
 // MapLibre instances
 let map: MapLibreMap | null = null
 let currentPopup: Popup | null = null
-const isMapLoaded = ref(false)
+let selectedFeature: GeoJsonFeature | null = null
+const isMapLoaded = shallowRef(false)
+
 /* ------------------------------------------------------------
   COLOR SCALE
 ------------------------------------------------------------ */
 const legendColors = computed(() => (props.useGoodColors ? goodColors : badColors))
-
-/* ------------------------------------------------------------
-  COMPUTE SCORES FOR GEOJSON
------------------------------------------------------------- */
-
-const computedGeoJson = computed<GeoJsonData | null>(() => {
-  if (!props.geojsonData) return null
-
-  // Deep copy the GeoJSON
-  const data = JSON.parse(JSON.stringify(props.geojsonData))
-
-  const scoresSummary: (number | null)[] = []
-  let missingDataCount = 0
-
-  // Calculate scores for each feature
-  data.features.forEach((feature: GeoJsonFeature, index: number) => {
-    // IMPORTANT: Remove any pre-existing score columns from the GeoJSON
-    // We want to use ONLY our newly calculated scores
-    delete feature.properties.separation_level_score
-    delete feature.properties.street_classification_score
-    delete feature.properties.maxspeed_int_score
-    delete feature.properties.composite_score
-
-    // Calculate fresh scores
-    const scores = calculateAllScores(feature.properties, props.modelConfig, modelWeights.value)
-
-    // Add newly computed scores to properties
-    Object.assign(feature.properties, scores)
-    feature.properties.color = scoreToColor(scores.composite_score, legendColors.value)
-    feature.id = index
-    feature.properties.__id = index
-    scoresSummary.push(scores.composite_score)
-    if (scores.composite_score === null) {
-      missingDataCount++
-    }
-
-    // Log first 5 features for debugging
-    if (index < 5) {
-      console.log(`Feature ${index}:`, {
-        name: feature.properties.name,
-        separation_level: feature.properties.separation_level,
-        street_classification: feature.properties.street_classification,
-        maxspeed_int: feature.properties.maxspeed_int,
-        calculated_scores: scores,
-      })
-    }
-  })
-
-  // Filter out null scores for statistics
-  const validScores = scoresSummary.filter((s): s is number => s !== null)
-
-  // Log score distribution
-  const uniqueScores = new Set(validScores)
-  console.log('Score calculation summary:', {
-    totalFeatures: data.features.length,
-    missingDataFeatures: missingDataCount,
-    featuresWithData: validScores.length,
-    uniqueScores: uniqueScores.size,
-    scoreRange:
-      validScores.length > 0
-        ? {
-            min: Math.min(...validScores),
-            max: Math.max(...validScores),
-            avg: (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(2),
-          }
-        : 'No valid scores',
-    sampleScores: scoresSummary.slice(0, 10),
-  })
-
-  if (uniqueScores.size === 1 && validScores.length > 0) {
-    console.warn('⚠️ ALL STREETS WITH DATA HAVE THE SAME SCORE:', validScores[0])
-    console.warn('This means the scoring logic is not varying. Check the logs above.')
-  }
-
-  if (missingDataCount > 0) {
-    console.log(`ℹ️ ${missingDataCount} streets have missing data and will be colored grey`)
-  }
-
-  return data
-})
 
 /* ------------------------------------------------------------
   BOUNDS CALCULATION
@@ -237,6 +86,7 @@ const fitToBounds = (data: GeoJsonData) => {
     map.fitBounds(bounds, { padding: 50, maxZoom: 16 })
   }
 }
+
 /* ------------------------------------------------------------
   SETUP LAYERS
 ------------------------------------------------------------ */
@@ -249,7 +99,7 @@ const setupMapLayers = () => {
   if (!map.getSource('streets-data')) {
     map.addSource('streets-data', {
       type: 'geojson',
-      data: (computedGeoJson.value as unknown as FeatureCollection) ?? {
+      data: (props.geojsonData as unknown as FeatureCollection) ?? {
         type: 'FeatureCollection',
         features: [],
       },
@@ -392,6 +242,7 @@ const setupMapLayers = () => {
     }
 
     const feature = features[0] as unknown as GeoJsonFeature
+    selectedFeature = feature
     setSelectedFeature(feature)
 
     const popupContent = createFeaturePopup(feature, legendColors.value)
@@ -409,6 +260,7 @@ const setupMapLayers = () => {
       popup.on('close', () => {
         if (currentPopup === popup) {
           clearHighlight()
+          selectedFeature = null
           currentPopup = null
         }
       })
@@ -416,8 +268,10 @@ const setupMapLayers = () => {
     }
   })
 
-  // Fit initial bounds if data is already available
-  if (props.geojsonData) {
+  // Fit initial bounds if raw or enriched data is already available
+  if (props.rawGeojsonData) {
+    fitToBounds(props.rawGeojsonData)
+  } else if (props.geojsonData) {
     fitToBounds(props.geojsonData)
   }
 }
@@ -455,10 +309,11 @@ const setSelectedFeature = (feature: GeoJsonFeature | null) => {
   map.setFilter('selected-street-casing', filter)
   map.setFilter('selected-street-line', filter)
 }
-
 const clearHighlight = () => {
+  selectedFeature = null
   setSelectedFeature(null)
 }
+
 /* ------------------------------------------------------------
   KEYBOARD SHORTCUTS
 ------------------------------------------------------------ */
@@ -508,33 +363,118 @@ onUnmounted(() => {
 /* ------------------------------------------------------------
   GEOJSON REACTIVITY
 ------------------------------------------------------------ */
-// Watch computed GeoJSON to update map layer data
-watch(computedGeoJson, (newData) => {
-  if (!map || !newData) return
-  if (!isMapLoaded.value) {
-    if (map.isStyleLoaded()) {
-      setupMapLayers()
-    }
-    return
-  }
-  const source = map.getSource('streets-data') as GeoJSONSource | undefined
-  if (source) {
-    source.setData(newData as unknown as FeatureCollection)
-  }
-})
-// Watch raw geojsonData changes (e.g. city change) to fit bounds
+// Watch enriched GeoJSON changes (weights, scores, or palette change)
+// Updates layer data and active popup content WITHOUT re-zooming or closing popup
 watch(
   () => props.geojsonData,
   (newData) => {
+    if (!map || !newData) return
+    if (!isMapLoaded.value) {
+      if (map.isStyleLoaded()) {
+        setupMapLayers()
+      }
+      return
+    }
+    const source = map.getSource('streets-data') as GeoJSONSource | undefined
+    if (source) {
+      source.setData(newData as unknown as FeatureCollection)
+    }
+    // If a popup is open on a selected street, refresh its score display in-place
+    if (currentPopup && selectedFeature) {
+      const id = selectedFeature.properties?.__id
+      const updatedFeature = typeof id === 'number' ? newData.features[id] : null
+      if (updatedFeature) {
+        selectedFeature = updatedFeature
+        const updatedContent = createFeaturePopup(updatedFeature, legendColors.value)
+        if (updatedContent) {
+          currentPopup.setHTML(updatedContent)
+        }
+      }
+    }
+  },
+)
+
+// Watch raw GeoJSON changes (ONLY triggers on city switches)
+// Resets highlight, closes popup, and fits bounds to the new city
+watch(
+  () => props.rawGeojsonData,
+  (newRaw) => {
     clearHighlight()
     currentPopup?.remove()
     currentPopup = null
-    if (newData && map && isMapLoaded.value) {
-      fitToBounds(newData)
+    if (newRaw && map && isMapLoaded.value) {
+      fitToBounds(newRaw)
     }
   },
 )
 </script>
+
+<template>
+  <div class="box map-component">
+    <div class="notification is-danger is-light is-flex is-align-items-center" v-if="error">
+      <AlertCircle :size="18" class="mr-2" />
+      <span>{{ error }}</span>
+    </div>
+
+    <div class="notification is-info is-light is-flex is-align-items-center" v-if="loading">
+      <Loader2 :size="18" class="mr-2 spin-icon" />
+      <span>Loading map data...</span>
+    </div>
+
+    <div ref="mapContainer" class="map-container"></div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-title is-flex is-align-items-center">
+        <Layers :size="14" class="mr-1" />
+        <span>Composite Score</span>
+      </div>
+
+      <div class="legend-colors">
+        <div
+          v-for="(color, index) in legendColors"
+          :key="index"
+          :style="{ backgroundColor: color }"
+          class="legend-color-block"
+        ></div>
+      </div>
+
+      <div class="legend-labels">
+        <span v-for="n in legendColors.length" :key="n - 1">{{ n - 1 }}</span>
+      </div>
+
+      <!-- Missing data indicator -->
+      <div class="legend-missing">
+        <div class="legend-missing-block"></div>
+        <span class="legend-missing-label">No data</span>
+      </div>
+    </div>
+
+    <!-- Color Scale Toggle -->
+    <div class="color-toggle">
+      <div class="toggle-container">
+        <span
+          class="toggle-label is-inline-flex is-align-items-center"
+          :class="{ active: useGoodColors }"
+        >
+          <ShieldCheck :size="14" class="mr-1" />
+          <span>Safety</span>
+        </span>
+        <label class="switch">
+          <input type="checkbox" :checked="!useGoodColors" @change="emit('toggleColors')" />
+          <span class="slider"></span>
+        </label>
+        <span
+          class="toggle-label is-inline-flex is-align-items-center"
+          :class="{ active: !useGoodColors }"
+        >
+          <AlertTriangle :size="14" class="mr-1" />
+          <span>Risk</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .map-component {
