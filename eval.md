@@ -60,7 +60,7 @@ Where the gaps come from:
 - `speed.py:75-78` sets untagged `residential` to 20 mph. That gives speed score 0 instead of 1 on essentially every residential street in both cities, and leaves them indistinguishable from each other.
 - Untagged arterials get no speed component. Their composite falls back to separation + classification, with the weights renormalized.
 - Effect on the mean of the frontend-equivalent composite (weighted by the `length` column, meters) if Malden/Everett residential defaulted to 25 mph: Everett 3.06 → 3.12, Malden 3.17 → 3.25. Somerville/Cambridge are unchanged at 2.63/2.45.
-- Untagged `service` roads (parking aisles, driveways) get no speed default and score 3.5. These roads are a larger share of the network in Malden/Everett (27–32% vs ~19%), so they raise those cities' aggregate stress.
+- Untagged `service` roads (parking aisles, driveways) get no speed default and score 3.5. `speed.py:75-78` sets untagged `residential` to 20 mph, but ignores `service` (even though `classification.py:19` categorizes it as `residential`). With speed missing (`NaN`), `compute_composite_score` drops the speed term and renormalizes the weights: $(0.60 \times 4.0 + 0.20 \times 2.0) / 0.80 = 3.50$. Missing speed thus acts as an unintended penalty, scoring low-speed parking aisles and alleys worse than a 20 mph residential street (2.80) or 25 mph residential street (3.00). Because untagged `service` roads represent a much larger share of the network in Malden/Everett (27–32% of length, 28–31% of edges vs. ~19–20% in Somerville/Cambridge; >99.8% untagged for speed), this missing-data penalty raises those cities' aggregate stress.
 
 Ground truth for arterial speeds would come from the MassDOT Road Inventory, which has posted speed for all roads. The Bike Inventory's speed field only covers bike-facility segments. This comparison was not run.
 
@@ -97,6 +97,7 @@ The composite formula is correct in both implementations. `compute_composite_sco
 6. **List-valued highway takes the most optimistic type.** `classification.py:67` picks the lowest-stress type from merged lists.
 7. **`footway` + `bicycle=yes` is excluded** by osmnx's `bike` network filter (~810 m near Everett's MassDOT paths).
 8. **The summary mean is unweighted.** `main.py:157` and `:301` average directed edges without length weighting, using the Python composite (affected by bugs 1–2). Two-way streets count twice.
+9. **Untagged service roads are penalized by weight renormalization.** `speed.py:75-78` applies the 20 mph default only when `highway == "residential"`, skipping `highway=service`. With no cycleway (separation 4) and residential classification (2), dropping missing speed renormalizes weights to $(0.60 \times 4 + 0.20 \times 2) / 0.80 = 3.5$. Low-speed parking aisles and driveways thus score higher stress than 20 mph residential streets (2.8).
 
 ### Minor
 
@@ -111,7 +112,7 @@ The composite formula is correct in both implementations. `compute_composite_sco
 3. Fix the `cycleway:buffer` NaN check so `cycleway:separation` is consulted.
 4. Score `path`/`pedestrian` + `bicycle=yes|permissive` as `separate`. Consider gating on `surface`.
 5. Make tag checks list-aware (`highway`, `bicycle`).
-6. Use a per-city residential speed default (25 mph for Malden/Everett). Consider MassDOT Road Inventory speeds for arterials.
+6. Use a per-city residential speed default (25 mph for Malden/Everett), and set a speed default for `service` roads (or all `residential`-classified types). Consider MassDOT Road Inventory speeds for arterials.
 7. Pass `truncate_by_edge=True` to `ox.graph_from_place`.
 8. Length-weight the summary mean.
 9. Add regression tests for issues 1–5.

@@ -68,6 +68,8 @@ const renderMermaid = async () => {
         useMaxWidth: true,
         htmlLabels: true,
         curve: 'basis',
+        wrappingWidth: 300,
+        rankSpacing: 35,
       },
     })
 
