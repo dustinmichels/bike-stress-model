@@ -55,7 +55,7 @@ def test_save_data_for_place(tmp_path):
     gpkg_path = os.path.join(out_dir, "somerville_streets.gpkg")
     geojson_path = os.path.join(out_dir, "somerville_streets.geojson")
 
-    assert os.path.exists(csv_path)
+    assert not os.path.exists(csv_path)
     assert os.path.exists(gpkg_path)
     assert os.path.exists(geojson_path)
 

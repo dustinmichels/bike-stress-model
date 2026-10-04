@@ -669,7 +669,10 @@ watch(
   padding: 5px 10px;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
   white-space: nowrap;
   user-select: none;
 }
@@ -680,7 +683,6 @@ watch(
 }
 
 .segment-button.active {
-  font-weight: 600;
   color: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }

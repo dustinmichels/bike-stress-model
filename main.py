@@ -194,10 +194,7 @@ def save_data_for_place(
     city_out = f"{out_path}/{place_first_word}"
     os.makedirs(out_path, exist_ok=True)
 
-    # save to csv
-    edges.to_csv(f"{city_out}_streets.csv", index=True)
-
-    # also save to GeoPackage
+    # save to GeoPackage
     edges.to_file(f"{city_out}_streets.gpkg", layer="streets", driver="GPKG")
     nodes.to_file(f"{city_out}_streets.gpkg", layer="nodes", driver="GPKG")
 
@@ -206,7 +203,7 @@ def save_data_for_place(
     sanitize_for_frontend(edges, out_path=geojson_out)
 
     c.print(
-        f"  [green]✓[/green] Exported [bold]{place_first_word}[/bold] (CSV, GPKG, GeoJSON)"
+        f"  [green]✓[/green] Exported [bold]{place_first_word}[/bold] (GPKG, GeoJSON)"
     )
 
 
