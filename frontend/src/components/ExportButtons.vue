@@ -2,29 +2,25 @@
 import { BookOpen, Share2 } from '@lucide/vue'
 
 const emit = defineEmits<{
-  openModal: []
+  openExport: []
+  openAbout: []
 }>()
 </script>
 
 <template>
   <div class="box export-map-container">
-    <button class="button is-primary is-fullwidth" @click="emit('openModal')">
+    <button type="button" class="button is-primary is-fullwidth" @click="emit('openExport')">
       <span class="icon">
         <Share2 :size="16" />
       </span>
       <span>Share / Export</span>
     </button>
-    <a
-      href="https://arcg.is/1ziaPD1"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="button is-info is-fullwidth mt-2"
-    >
+    <button type="button" class="button is-info is-fullwidth mt-2" @click="emit('openAbout')">
       <span class="icon">
         <BookOpen :size="16" />
       </span>
       <span>About</span>
-    </a>
+    </button>
   </div>
 </template>
 

@@ -1,3 +1,18 @@
+## Unreleased
+
+### Frontend
+
+- **Map loading state**: Lazy-load MapLibre so the page controls render immediately, and show a map-area spinner until both the map and city data are ready.
+- **About modal**: Replaced the external About link with a responsive, keyboard-accessible model guide covering the 0–4 stress score, default weights, map controls, assumptions, known data limitations, and links to the original story map and course code.
+- **Map resource hints**: Preconnect to the Carto style and tile origins while the application shell loads, reducing cold-start DNS and TLS latency before MapLibre requests the basemap.
+
+### Backend & Data Pipeline
+
+- **Per-city residential speed defaults**: `PLACES` in `main.py` is now a list of pydantic `Place` models (`name`, `residential_default_mph`), and `prepare_data_for_place` takes a `Place`. Residential streets without a posted `maxspeed` default to 20 mph in Somerville and Cambridge and 25 mph in Everett and Malden. The default now covers every `residential`-class edge (`residential`, `living_street`, `service`, `unclassified`, `track`, list-valued `highway`); before, only `highway=residential` got it, and always at 20 mph. Arterials without a posted speed stay null. Removed the dead `DEFAULT_SPEED_LIMIT` and the unused frontend `defaultCategory` fields.
+- **Typed pipeline config (pydantic)**: `Place` gained `city`/`slug` properties; `save_data_for_place` and `copy_to_frontend` take `Place` objects instead of name strings. The summary table rows are `CitySummary` models. Composite weights are a `CompositeWeights` model (each ≥ 0, at least one > 0; they are renormalized per edge, so they need not sum to 1).
+- **Validated score tables**: New `src/stressmodel/scoring.py` (`Score` 0–4, `Tier`, `Tiers` with ascending bounds). `SPEED_RANKINGS`/`LANES_RANKINGS` became `SPEED_TIERS`/`LANES_TIERS`; `get_speed_score`/`get_lanes_score` dropped their `rankings` parameter. `CLASSIFICATION_SCORES` and separation `RANKING` are validated at import against the new `StreetClass` and `SeparationLevel` `Literal` types. Pipeline outputs are unchanged.
+- **Routing**: `src/route.py` validates school rows (`Name`, `GlobalID`, `geometry`) and census-block rows (`GEOID20`, `BLKGRP20`, `TRACT20`, `geometry`) through `School`/`CensusBlock` models before routing, raising `ValidationError` on missing columns. `weight` is typed `RouteWeight`. Fixed `compute_routes_from_census_blocks_to_all_schools` returning only the last school's errors; it now returns errors from every school.
+
 ## Oct 2, 2026
 
 ### Backend & Data Pipeline

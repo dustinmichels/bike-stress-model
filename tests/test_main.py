@@ -1,6 +1,6 @@
 import os
 
-from main import copy_to_frontend, save_data_for_place
+from main import Place, copy_to_frontend, save_data_for_place
 
 
 def test_copy_to_frontend(tmp_path):
@@ -15,7 +15,10 @@ def test_copy_to_frontend(tmp_path):
     somerville_boundary = out_dir / "somerville_boundary.geojson"
     somerville_boundary.write_text('{"type": "FeatureCollection", "features": []}')
 
-    places = ["Somerville, Massachusetts, USA", "Unknown City, USA"]
+    places = [
+        Place(name="Somerville, Massachusetts, USA", residential_default_mph=20),
+        Place(name="Unknown City, USA", residential_default_mph=25),
+    ]
 
     copied = copy_to_frontend(
         places=places,
@@ -49,7 +52,8 @@ def test_save_data_for_place(tmp_path):
         crs="EPSG:4326",
     )
 
-    save_data_for_place("Somerville, Massachusetts, USA", out_dir, nodes, edges)
+    place = Place(name="Somerville, Massachusetts, USA", residential_default_mph=20)
+    save_data_for_place(place, out_dir, nodes, edges)
 
     gpkg_path = os.path.join(out_dir, "somerville_streets.gpkg")
     geojson_path = os.path.join(out_dir, "somerville_streets.geojson")

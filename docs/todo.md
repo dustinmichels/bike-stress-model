@@ -248,7 +248,6 @@ Add `tests/test_stressmodel.py` with small hand-built DataFrames:
 
 ## P2: minor
 
-- Fix the `speed.py` `SPEED_RANKINGS` comment: `> 50 mph -> 4 points`.
 - Category scores are duplicated in Python `RANKING` and `bikeData.ts`. Move the default scores to one JSON file (e.g. `frontend/src/data/scores.json`) that `bikeData.ts` imports and Python loads. The frontend's runtime score overrides keep working on top of it.
 - `lanes`: eval.md says it is "never exported". That's wrong: `lanes_int` is in `OUTPUT_COLUMNS` and in the shipped GeoJSON. It is computed and exported but not scored. Leave it as is.
 - `cycleway:*:lane=advisory` (14 ways) marks lanes motorists may enter. Leave it scored as `lane` unless advisory lanes become common.

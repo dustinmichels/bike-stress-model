@@ -19,7 +19,7 @@ The model evaluates cycling stress across three active components (scored 0 for 
    - Identifies buffered lanes via `cycleway:buffer` and `cycleway:separation` tags.
 
 2. **Speed Limit (`src/stressmodel/speed.py`)**
-   - Extracts posted speeds, falling back to 20 mph for residential streets when unmapped.
+   - Extracts posted speeds. Residential-class streets (`residential`, `living_street`, `service`, `unclassified`, `track`) with no posted speed get the city's default: 20 mph in Somerville and Cambridge, 25 mph in Everett and Malden (`PLACES` in `main.py`). Other missing speeds stay null.
    - Maps speed to stress tiers (≤20 mph: 0, ≤25 mph: 1, ≤30 mph: 2.5, ≤40 mph: 3, ≤50 mph: 3.5, >50 mph: 4).
 
 3. **Street Classification (`src/stressmodel/classification.py`)**

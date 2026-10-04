@@ -1,11 +1,38 @@
 import itertools
+from typing import Literal
 
 import geopandas as gpd
 import networkx as nx
 import osmnx as ox
 import pandas as pd
+from pydantic import BaseModel, ConfigDict, Field
 from shapely.geometry import LineString, Point
 from tqdm import tqdm
+
+RouteWeight = Literal["composite_score", "length"]
+
+
+class School(BaseModel):
+    """Columns of a schools GeoDataFrame row used for routing (other columns ignored)."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
+
+    name: str = Field(alias="Name")
+    global_id: str = Field(alias="GlobalID")
+    geometry: Point
+    """Centroid of the school."""
+
+
+class CensusBlock(BaseModel):
+    """Columns of a census-block GeoDataFrame row used for routing (other columns ignored)."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
+
+    geoid: str = Field(alias="GEOID20")
+    block_group: str = Field(alias="BLKGRP20")
+    tract: str = Field(alias="TRACT20")
+    geometry: Point
+    """Centroid of the block."""
 
 
 def get_route_gdf(G, start_coord, end_coord, weight="composite_score"):
@@ -124,17 +151,18 @@ def compute_routes_from_census_blocks_to_school(
     G: nx.classes.multidigraph.MultiDiGraph,
     somerville_census_blocks: gpd.GeoDataFrame,
     school: pd.Series,
-    weight: str = "composite_score",
+    weight: RouteWeight = "composite_score",
 ):
     """
     Iterate over census blocks centroids GeoDataFrame and compute routes to the given school.
 
     Parameters:
     - G: networkx graph (OSMnx graph)
-    - somerville_census_blocks: GeoDataFrame with census blocks centroids
-    - school: pd.Series with school information (must contain 'geometry', 'Name', '
-        GlobalID' fields)
-    - weight: str, edge attribute to use as weight (default: "composite_score" | "length")
+    - somerville_census_blocks: GeoDataFrame with census block centroids (see `CensusBlock`)
+    - school: pd.Series with school information (see `School`)
+    - weight: edge attribute to use as weight
+
+    Raises pydantic.ValidationError if the school or any block lacks a required column.
     """
 
     errors = []
@@ -142,23 +170,27 @@ def compute_routes_from_census_blocks_to_school(
 
     use_crs = G.graph.get("crs", "EPSG:4326")
 
-    for i, row in tqdm(
-        somerville_census_blocks.iterrows(), total=len(somerville_census_blocks)
+    dest = School.model_validate(school.to_dict())
+    blocks = [
+        CensusBlock.model_validate(record)
+        for record in somerville_census_blocks.to_dict("records")
+    ]
+
+    for i, block in tqdm(
+        zip(somerville_census_blocks.index, blocks), total=len(blocks)
     ):
-        orig_point = row["geometry"]
-        dest_point = school["geometry"]
         try:
-            route_gdf = get_route_gdf(G, orig_point, dest_point, weight=weight)
+            route_gdf = get_route_gdf(G, block.geometry, dest.geometry, weight=weight)
         except Exception as e:  # noqa: BLE001
             errors.append(f"Error on index {i}: {e}")
             route_gdf = gpd.GeoDataFrame()
 
         if not route_gdf.empty:
-            route_gdf["from_block_geoid"] = row["GEOID20"]
-            route_gdf["from_blkgrp20"] = row["BLKGRP20"]
-            route_gdf["from_tract20"] = row["TRACT20"]
-            route_gdf["to_school_name"] = school["Name"]
-            route_gdf["to_school_id"] = school["GlobalID"]
+            route_gdf["from_block_geoid"] = block.geoid
+            route_gdf["from_blkgrp20"] = block.block_group
+            route_gdf["from_tract20"] = block.tract
+            route_gdf["to_school_name"] = dest.name
+            route_gdf["to_school_id"] = dest.global_id
             dataframes.append(route_gdf)
 
     combined_gdf = gpd.GeoDataFrame(
@@ -171,7 +203,7 @@ def compute_routes_from_census_blocks_to_all_schools(
     G: nx.classes.multidigraph.MultiDiGraph,
     somerville_census_blocks: gpd.GeoDataFrame,
     schools_gdf: gpd.GeoDataFrame,
-    weight="composite_score",
+    weight: RouteWeight = "composite_score",
 ):
     """
     Compute routes from census blocks to all schools and aggregate results.
@@ -179,33 +211,34 @@ def compute_routes_from_census_blocks_to_all_schools(
     Parameters
     ----------
     schools_gdf : GeoDataFrame
-        GeoDataFrame containing school locations and attributes
+        GeoDataFrame containing school locations and attributes (see `School`)
     G : networkx.classes.multidigraph.MultiDiGraph
         Street network graph
     somerville_census_blocks : GeoDataFrame
-        Census blocks to route from
-    weight : str, optional
-        Edge weight to use for routing. Must be "composite_score" or "length".
-        Default is "composite_score".
+        Census blocks to route from (see `CensusBlock`)
+    weight : RouteWeight, optional
+        Edge weight to use for routing. Default is "composite_score".
 
     Returns
     -------
     all_routes_gdf : GeoDataFrame
         Aggregated GeoDataFrame of all routes from census blocks to schools
     errors : list
-        List of error messages encountered during routing
+        Routing error messages from every school
     """
     if weight not in ["composite_score", "length"]:
         raise ValueError("weight must be 'composite_score' or 'length'")
 
     all_routes = []  # accumulate all GeoDataFrames
+    all_errors: list[str] = []
 
-    for i, school in schools_gdf.iterrows():
+    for _, school in schools_gdf.iterrows():
         print(f"----- {school['Name']} -----")
 
         combined_gdf, errors = compute_routes_from_census_blocks_to_school(
             G, somerville_census_blocks, school, weight=weight
         )
+        all_errors.extend(errors)
 
         # add school name column
         combined_gdf = combined_gdf.assign(school_name=school["Name"])
@@ -218,4 +251,4 @@ def compute_routes_from_census_blocks_to_all_schools(
         pd.concat(all_routes, ignore_index=True), crs=all_routes[0].crs
     )
 
-    return all_routes_gdf, errors
+    return all_routes_gdf, all_errors

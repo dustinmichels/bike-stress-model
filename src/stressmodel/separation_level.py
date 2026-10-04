@@ -2,18 +2,35 @@
 What type of cycleway is it?
 """
 
+from typing import Literal
+
 import numpy as np
 import pandas as pd
+from pydantic import TypeAdapter
 
-RANKING = {
-    "separate": 0,  # totally separated
-    "track": 1,  # totally separated (but sometimes used for lane with buffer)
-    "lane_buffered": 1.5,  # Added buffered lane type
-    "lane": 2.5,  # dedicated bike lane, not separate
-    "share_busway": 3,  # shared with bus
-    "shared_lane": 3.5,  # in traffic
-    "none": 4,  # no cycling infrastructure
-}
+from src.stressmodel.scoring import Score
+
+SeparationLevel = Literal[
+    "separate",
+    "track",
+    "lane_buffered",
+    "lane",
+    "share_busway",
+    "shared_lane",
+    "none",
+]
+
+RANKING = TypeAdapter(dict[SeparationLevel, Score]).validate_python(
+    {
+        "separate": 0,  # totally separated
+        "track": 1,  # totally separated (but sometimes used for lane with buffer)
+        "lane_buffered": 1.5,  # Added buffered lane type
+        "lane": 2.5,  # dedicated bike lane, not separate
+        "share_busway": 3,  # shared with bus
+        "shared_lane": 3.5,  # in traffic
+        "none": 4,  # no cycling infrastructure
+    }
+)
 
 
 def combine_cycleways(row):

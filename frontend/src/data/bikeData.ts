@@ -22,7 +22,6 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
   separation_level: {
     weight: 60,
     displayLabel: 'Separation Level',
-    defaultCategory: 'none',
     img: '',
     link: 'https://wiki.openstreetmap.org/wiki/Key:cycleway',
     notes: '',
@@ -77,7 +76,6 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
   street_classification: {
     weight: 20,
     displayLabel: 'Busyness',
-    defaultCategory: 'residential',
     img: '',
     notes:
       'Evaluates the type of street and its primary function. Lower-traffic streets and dedicated paths score higher.',
@@ -112,7 +110,6 @@ export const BIKE_INFRASTRUCTURE_MODEL: BikeInfrastructureModel = {
   speed_limit: {
     weight: 20,
     displayLabel: 'Speed Limit',
-    defaultCategory: 25, // Integer value, will be mapped to '25_mph' category
     img: '',
     notes: '',
     categories: {

@@ -1,18 +1,20 @@
 import numpy as np
 import pandas as pd
 
+from src.stressmodel.scoring import Tier, Tiers
+
 SpeedInput = str | float | list[str]
 
-DEFAULT_SPEED_LIMIT = None  # Global default speed limit in mph
-
-SPEED_RANKINGS = [
-    (20, 0),  # <= 20 mph -> 0 points
-    (25, 1),
-    (30, 2.5),
-    (40, 3),
-    (50, 3.5),
-    (float("inf"), 4),  # > 50 mph -> 5 points
-]
+SPEED_TIERS = Tiers(
+    (
+        Tier(max_value=20, score=0),
+        Tier(max_value=25, score=1),
+        Tier(max_value=30, score=2.5),
+        Tier(max_value=40, score=3),
+        Tier(max_value=50, score=3.5),
+        Tier(max_value=float("inf"), score=4),  # > 50 mph
+    )
+)
 
 
 def extract_maxspeed(value: SpeedInput) -> float:
@@ -43,48 +45,32 @@ def extract_maxspeed(value: SpeedInput) -> float:
     return parse_speed(value)
 
 
-def get_speed_score(mph: float, rankings=SPEED_RANKINGS) -> int | float:
+def get_speed_score(mph: float) -> int | float:
     """Get score based on speed. Returns np.nan if mph is np.nan."""
     if pd.isna(mph):  # Handle both np.nan and pd.NA
         return np.nan
-
-    for threshold, score in rankings:
-        if mph <= threshold:
-            return score
-    return rankings[-1][1]  # fallback
+    return SPEED_TIERS.score(mph)
 
 
-def run(df):
+def run(
+    df: pd.DataFrame,
+    residential_default_mph: float,
+    street_classification: pd.Series,
+) -> tuple[pd.Series, pd.Series]:
     """
-    Process the DataFrame to extract maxspeed as integer.
-    Missing speed limits remain null unless DEFAULT_SPEED_LIMIT is set.
+    Extract the posted speed in mph and score it.
+
+    Residential-class edges (see `classification.run`) with no posted speed get
+    the city's residential default. Other missing speeds stay null.
 
     Args:
         df: DataFrame with a 'maxspeed' column.
+        residential_default_mph: Statutory default for the city's residential streets.
+        street_classification: Output of `classification.run`, aligned with `df`.
     Returns:
-        Tuple[pd.Series, pd.Series]
         (maxspeed_int, maxspeed_int_score)
     """
-    # make a copy
-    df = df.copy()
-
-    # extract maxspeed
-    df["maxspeed_int"] = df["maxspeed"].apply(extract_maxspeed)
-
-    # if "highway=residential" and maxspeed is missing, set to 20 mph
-    mask_residential_missing = (df["highway"] == "residential") & (
-        df["maxspeed_int"].isna()
-    )
-    df.loc[mask_residential_missing, "maxspeed_int"] = 20
-
-    # apply default for missing values (if configured)
-    if DEFAULT_SPEED_LIMIT is not None:
-        df["maxspeed_int"] = (
-            df["maxspeed_int"].fillna(DEFAULT_SPEED_LIMIT).astype("Int64")
-        )
-
-    # calculate score (will be np.nan when maxspeed_int is np.nan)
-    df["maxspeed_int_score"] = df["maxspeed_int"].apply(get_speed_score)
-
-    # return maxspeed and score series
-    return df["maxspeed_int"], df["maxspeed_int_score"]
+    maxspeed_int = df["maxspeed"].apply(extract_maxspeed)
+    missing_residential = maxspeed_int.isna() & (street_classification == "residential")
+    maxspeed_int = maxspeed_int.mask(missing_residential, residential_default_mph)
+    return maxspeed_int, maxspeed_int.apply(get_speed_score)

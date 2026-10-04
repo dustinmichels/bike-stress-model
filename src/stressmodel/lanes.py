@@ -1,15 +1,19 @@
 import numpy as np
 import pandas as pd
 
+from src.stressmodel.scoring import Tier, Tiers
+
 LanesInput = str | int | float | list[str] | None
 
-LANES_RANKINGS = [
-    (2, 0),  # 1-2 lanes -> 0 points
-    (3, 2),  # 3 lanes -> 2 points
-    (4, 3),  # 4 lanes -> 3 points
-    (5, 3.5),  # 5 lanes -> 3.5 points
-    (float("inf"), 4),  # 6+ lanes -> 4 points
-]
+LANES_TIERS = Tiers(
+    (
+        Tier(max_value=2, score=0),  # 1-2 lanes
+        Tier(max_value=3, score=2),
+        Tier(max_value=4, score=3),
+        Tier(max_value=5, score=3.5),
+        Tier(max_value=float("inf"), score=4),  # 6+ lanes
+    )
+)
 
 DEFAULT_LANES = None  # Global default for missing lane values
 
@@ -47,16 +51,11 @@ def extract_lanes(value: LanesInput) -> float:
     return parse_lanes(value)
 
 
-def get_lanes_score(
-    num_lanes: float, rankings: list[tuple[float, int]] = LANES_RANKINGS
-) -> int:
+def get_lanes_score(num_lanes: float) -> int | float:
     """Get score based on number of lanes."""
     if np.isnan(num_lanes):
         return 0
-    for threshold, score in rankings:
-        if num_lanes <= threshold:
-            return score
-    return rankings[-1][1]  # fallback
+    return LANES_TIERS.score(num_lanes)
 
 
 def run(df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:

@@ -1,11 +1,18 @@
+from typing import Literal
+
 import numpy as np
 import pandas as pd
+from pydantic import TypeAdapter
+
+from src.stressmodel.scoring import Score
 
 StreetInput = str | list[str]
 
+StreetClass = Literal["dedicated_path", "residential", "medium-capacity", "motorway"]
+
 # Street type classifications
 # See: https://wiki.openstreetmap.org/wiki/Key:highway
-STREET_CLASSIFICATIONS = {
+STREET_CLASSIFICATIONS: dict[str, StreetClass] = {
     # Cycleway category - dedicated bike infrastructure and low-traffic paths
     "cycleway": "dedicated_path",
     "path": "dedicated_path",
@@ -34,15 +41,17 @@ STREET_CLASSIFICATIONS = {
 }
 
 # Scores for each classification (best to worst for cycling)
-CLASSIFICATION_SCORES = {
-    "dedicated_path": 0,
-    "residential": 2,
-    "medium-capacity": 3,
-    "motorway": 4,
-}
+CLASSIFICATION_SCORES = TypeAdapter(dict[StreetClass, Score]).validate_python(
+    {
+        "dedicated_path": 0,
+        "residential": 2,
+        "medium-capacity": 3,
+        "motorway": 4,
+    }
+)
 
 # Default classification for unknown types
-DEFAULT_CLASSIFICATION = "medium-capacity"
+DEFAULT_CLASSIFICATION: StreetClass = "medium-capacity"
 
 
 def extract_street_type(value: StreetInput) -> str:
@@ -78,16 +87,16 @@ def extract_street_type(value: StreetInput) -> str:
     return ""
 
 
-def get_street_classification(street_type: str) -> str:
-    """Get classification based on street type."""
+def get_street_classification(street_type: str) -> StreetClass | float:
+    """Get classification based on street type; NaN if the type is missing."""
     if pd.isna(street_type):
         return np.nan
     return STREET_CLASSIFICATIONS.get(street_type, DEFAULT_CLASSIFICATION)
 
 
-def get_street_score(classification: str) -> int:
+def get_street_score(classification: StreetClass | float) -> int | float:
     """Get score based on street classification."""
-    if pd.isna(classification):
+    if not isinstance(classification, str):  # NaN: missing street type
         return 0
     return CLASSIFICATION_SCORES.get(
         classification, CLASSIFICATION_SCORES[DEFAULT_CLASSIFICATION]

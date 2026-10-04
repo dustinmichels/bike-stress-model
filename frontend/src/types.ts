@@ -14,7 +14,6 @@ export interface ParameterData {
   img?: string
   link?: string
   notes: string
-  defaultCategory?: string | number // Default category to use when data is missing
   categories: Record<string, CategoryData>
 }
 

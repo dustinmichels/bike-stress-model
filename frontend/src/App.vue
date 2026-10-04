@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import { Loader2 } from '@lucide/vue'
 import type { ColorMode } from '@/types'
 import { useBikeModel } from '@/composables/useBikeModel'
 import { useCitySelection } from '@/composables/useCitySelection'
 import { defineAsyncComponent, shallowRef } from 'vue'
 import AboutComponent from './components/AboutComponent.vue'
+import AboutModal from './components/AboutModal.vue'
 import ExportButtons from './components/ExportButtons.vue'
-import MapComponent from './components/Map/Map.vue'
 import ModelSliders from './components/ModelSliders.vue'
 import SettingsModal from './components/SettingsModal.vue'
+
+// Split MapLibre and its worker out of the initial bundle so the rest of the page renders first.
+const MapComponent = defineAsyncComponent(() => import('./components/Map/Map.vue'))
 
 // Lazy-load heavy ExportMapModal containing mermaid to keep initial bundle lightweight
 const ExportMapModal = defineAsyncComponent(
@@ -21,6 +25,8 @@ const { cities, currCity } = useCitySelection()
 const settingsDataField = shallowRef<string | null>(null)
 const colorMode = shallowRef<ColorMode>('safety')
 const isExportModalOpen = shallowRef(false)
+const isAboutModalOpen = shallowRef(false)
+const isMapReady = shallowRef(false)
 
 // Bike model configuration, weights, and scored GeoJSON dataset
 const {
@@ -45,19 +51,28 @@ const handleOpenSettings = (dataField: string) => {
   <div class="container is-fluid main-container">
     <div class="columns is-multiline top-row">
       <div class="column is-two-thirds-tablet is-full-mobile map-column">
-        <MapComponent
-          :geojson-data="enrichedGeoJson"
-          :raw-geojson-data="geojsonData"
-          :model-config="modelConfig"
-          :color-mode="colorMode"
-          :loading="loading"
-          :error="error"
-          @update:color-mode="colorMode = $event"
-        />
+        <div class="map-shell" :aria-busy="loading || !isMapReady">
+          <MapComponent
+            :geojson-data="enrichedGeoJson"
+            :raw-geojson-data="geojsonData"
+            :model-config="modelConfig"
+            :color-mode="colorMode"
+            :error="error"
+            @ready="isMapReady = true"
+            @update:color-mode="colorMode = $event"
+          />
+          <div v-if="loading || !isMapReady" class="map-loading" role="status" aria-live="polite">
+            <Loader2 :size="38" class="map-loading-icon" aria-hidden="true" />
+            <span>Loading map…</span>
+          </div>
+        </div>
       </div>
       <div class="column is-one-third-tablet is-full-mobile right-column">
         <AboutComponent :cities="cities" v-model:curr-city="currCity" />
-        <ExportButtons @open-modal="isExportModalOpen = true" />
+        <ExportButtons
+          @open-about="isAboutModalOpen = true"
+          @open-export="isExportModalOpen = true"
+        />
       </div>
     </div>
     <div class="columns bottom-row">
@@ -69,6 +84,8 @@ const handleOpenSettings = (dataField: string) => {
         />
       </div>
     </div>
+
+    <AboutModal :is-open="isAboutModalOpen" @close="isAboutModalOpen = false" />
 
     <!-- Settings Modal -->
     <SettingsModal
@@ -112,6 +129,45 @@ const handleOpenSettings = (dataField: string) => {
 .column {
   padding: 0.25rem;
   display: flex;
+}
+
+.map-shell {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.map-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border-radius: 6px;
+  background: #242424;
+  color: #fff;
+  font-weight: 600;
+}
+
+.map-loading-icon {
+  color: #3e8ed0;
+  animation: map-loading-spin 0.9s linear infinite;
+}
+
+@keyframes map-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-loading-icon {
+    animation: none;
+  }
 }
 
 .right-column {

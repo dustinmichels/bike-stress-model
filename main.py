@@ -5,6 +5,13 @@ import shutil
 import networkx as nx
 import osmnx as ox
 import pandas as pd
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    NonNegativeFloat,
+    PositiveInt,
+    model_validator,
+)
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
@@ -18,11 +25,63 @@ console = Console()
 
 OUT_PATH = "data/out/main"
 
-PLACES = [
-    "Somerville, Massachusetts, USA",
-    "Cambridge, Massachusetts, USA",
-    "Everett, Massachusetts, USA",
-    "Malden, Massachusetts, USA",
+
+class Place(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    """OSM geocoder query, e.g. "Somerville, Massachusetts, USA"."""
+    residential_default_mph: PositiveInt
+    """Speed limit for residential-class streets without a posted `maxspeed`."""
+
+    @property
+    def city(self) -> str:
+        """First component of `name`, e.g. "Somerville"."""
+        return self.name.split(",")[0].strip()
+
+    @property
+    def slug(self) -> str:
+        """File-name prefix for this place's outputs, e.g. "somerville"."""
+        return self.city.replace(" ", "_").lower()
+
+
+class CompositeWeights(BaseModel):
+    """Weights of each model score in `composite_score`.
+
+    Weights are renormalized per edge over the non-missing scores, so they need
+    not sum to 1.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    separation_level_score: NonNegativeFloat = 0.60
+    maxspeed_int_score: NonNegativeFloat = 0.20
+    street_classification_score: NonNegativeFloat = 0.20
+
+    @model_validator(mode="after")
+    def _any_positive(self) -> "CompositeWeights":
+        if not any(self.model_dump().values()):
+            raise ValueError("at least one weight must be positive")
+        return self
+
+
+class CitySummary(BaseModel):
+    """One row of the pipeline summary table."""
+
+    city: str
+    nodes: int
+    edges: int
+    length_km: float
+    mean_score: float
+    median_score: float
+    geojson: str
+
+
+PLACES: list[Place] = [
+    Place(name="Somerville, Massachusetts, USA", residential_default_mph=20),
+    Place(name="Cambridge, Massachusetts, USA", residential_default_mph=20),
+    Place(name="Everett, Massachusetts, USA", residential_default_mph=25),
+    Place(name="Malden, Massachusetts, USA", residential_default_mph=25),
 ]
 
 
@@ -114,34 +173,36 @@ def process_network(edges: pd.DataFrame) -> pd.DataFrame:
     return edges
 
 
-def prepare_data_for_place(place: str, console: Console | None = None):
+def prepare_data_for_place(place: Place, console: Console | None = None):
     c = console or globals().get("console", Console())
 
     with c.status(
-        f"[cyan]Downloading bike network for {place}...[/cyan]", spinner="dots"
+        f"[cyan]Downloading bike network for {place.name}...[/cyan]", spinner="dots"
     ):
-        nodes, edges = get_network(place, "bike")
+        nodes, edges = get_network(place.name, "bike")
     c.print(
         f"  [green]✓[/green] Network downloaded: [bold]{len(nodes):,}[/bold] nodes, [bold]{len(edges):,}[/bold] edges"
     )
 
     with c.status(
-        f"[cyan]Processing network and running stress models for {place}...[/cyan]",
+        f"[cyan]Processing network and running stress models for {place.name}...[/cyan]",
         spinner="dots",
     ):
         edges = process_network(edges)
 
-        # MODEL - SPEED: parse maxspeed
-        edges["maxspeed_int"], edges["maxspeed_int_score"] = sm.speed.run(edges)
+        # MODEL - CATEGORY: classify street types
+        edges["street_classification"], edges["street_classification_score"] = (
+            sm.classification.run(edges)
+        )
+
+        # MODEL - SPEED: parse maxspeed, default residential-class streets
+        edges["maxspeed_int"], edges["maxspeed_int_score"] = sm.speed.run(
+            edges, place.residential_default_mph, edges["street_classification"]
+        )
 
         # MODEL - SEPARATION LEVEL: combine cycleway types for separation level
         edges["separation_level"], edges["separation_level_score"] = (
             sm.separation_level.run(edges)
-        )
-
-        # MODEL - CATEGORY: classify street types
-        edges["street_classification"], edges["street_classification_score"] = (
-            sm.classification.run(edges)
         )
 
         # MODEL - LANES: parse number of lanes
@@ -167,14 +228,11 @@ def prepare_data_for_place(place: str, console: Console | None = None):
     return nodes, edges
 
 
+COMPOSITE_WEIGHTS = CompositeWeights()
+
+
 def compute_composite_score(edges: pd.DataFrame) -> pd.Series:
-    weights = pd.Series(
-        {
-            "separation_level_score": 0.60,
-            "maxspeed_int_score": 0.20,
-            "street_classification_score": 0.20,
-        }
-    )
+    weights = pd.Series(COMPOSITE_WEIGHTS.model_dump())
 
     # Compute weighted sum using dot, ignoring NaNs
     weighted_sum = edges[weights.index].fillna(0).dot(weights)
@@ -187,11 +245,10 @@ def compute_composite_score(edges: pd.DataFrame) -> pd.Series:
 
 
 def save_data_for_place(
-    place: str, out_path: str, nodes, edges, console: Console | None = None
+    place: Place, out_path: str, nodes, edges, console: Console | None = None
 ):
     c = console or globals().get("console", Console())
-    place_first_word = place.split(",")[0].strip().replace(" ", "_").lower()
-    city_out = f"{out_path}/{place_first_word}"
+    city_out = f"{out_path}/{place.slug}"
     os.makedirs(out_path, exist_ok=True)
 
     # save to GeoPackage
@@ -202,13 +259,11 @@ def save_data_for_place(
     geojson_out = f"{city_out}_streets.geojson"
     sanitize_for_frontend(edges, out_path=geojson_out)
 
-    c.print(
-        f"  [green]✓[/green] Exported [bold]{place_first_word}[/bold] (GPKG, GeoJSON)"
-    )
+    c.print(f"  [green]✓[/green] Exported [bold]{place.slug}[/bold] (GPKG, GeoJSON)")
 
 
 def copy_to_frontend(
-    places: list[str] = PLACES,
+    places: list[Place] = PLACES,
     out_path: str = OUT_PATH,
     dest_dir: str = "frontend/public/data",
     chart_dest_dir: str = "deployed-charts",
@@ -220,8 +275,7 @@ def copy_to_frontend(
     copied_files: list[str] = []
 
     for place in places:
-        place_first_word = place.split(",")[0].strip().replace(" ", "_").lower()
-        filename = f"{place_first_word}_streets.geojson"
+        filename = f"{place.slug}_streets.geojson"
         src_file = os.path.join(out_path, filename)
         dest_file = os.path.join(dest_dir, filename)
 
@@ -274,19 +328,18 @@ def main():
         shutil.rmtree(OUT_PATH)
     os.makedirs(OUT_PATH, exist_ok=True)
 
-    summary_data = []
+    summaries: list[CitySummary] = []
 
     for place in PLACES:
-        city_name = place.split(",")[0].strip()
-        c.rule(f"[bold cyan]📍 {place}[/bold cyan]")
+        c.rule(f"[bold cyan]📍 {place.name}[/bold cyan]")
 
         nodes, edges = prepare_data_for_place(place, console=c)
 
         # also get boundary polygon
         with c.status(
-            f"[cyan]Geocoding city boundary for {city_name}...[/cyan]", spinner="dots"
+            f"[cyan]Geocoding city boundary for {place.city}...[/cyan]", spinner="dots"
         ):
-            city_gdf = ox.geocode_to_gdf(place)
+            city_gdf = ox.geocode_to_gdf(place.name)
 
         # filter down to output columns
         filtered_edges = edges[OUTPUT_COLUMNS]
@@ -295,28 +348,22 @@ def main():
         save_data_for_place(place, OUT_PATH, nodes, filtered_edges, console=c)
 
         # also save boundary polygon
-        place_first_word = city_name.replace(" ", "_").lower()
-        boundary_file = f"{OUT_PATH}/{place_first_word}_boundary.geojson"
+        boundary_file = f"{OUT_PATH}/{place.slug}_boundary.geojson"
         city_gdf.to_file(boundary_file, driver="GeoJSON")
         c.print(
             f"  [green]✓[/green] Saved boundary polygon → [dim]{boundary_file}[/dim]"
         )
 
-        mean_score = float(edges["composite_score"].mean())
-        median_score = float(edges["composite_score"].median())
-        total_km = float(edges["length"].sum() / 1000)
-        geojson_filename = f"{place_first_word}_streets.geojson"
-
-        summary_data.append(
-            {
-                "city": city_name,
-                "nodes": len(nodes),
-                "edges": len(edges),
-                "length_km": total_km,
-                "mean_score": mean_score,
-                "median_score": median_score,
-                "geojson": geojson_filename,
-            }
+        summaries.append(
+            CitySummary(
+                city=place.city,
+                nodes=len(nodes),
+                edges=len(edges),
+                length_km=float(edges["length"].sum() / 1000),
+                mean_score=float(edges["composite_score"].mean()),
+                median_score=float(edges["composite_score"].median()),
+                geojson=f"{place.slug}_streets.geojson",
+            )
         )
 
     # Summary table
@@ -341,15 +388,17 @@ def main():
         else:
             return f"[red]{score:.2f}[/red]"
 
-    for item in summary_data:
-        score_str = f"{_format_score(item['mean_score'])} | {_format_score(item['median_score'])}"
+    for item in summaries:
+        score_str = (
+            f"{_format_score(item.mean_score)} | {_format_score(item.median_score)}"
+        )
         table.add_row(
-            item["city"],
-            f"{item['nodes']:,}",
-            f"{item['edges']:,}",
-            f"{item['length_km']:.1f} km",
+            item.city,
+            f"{item.nodes:,}",
+            f"{item.edges:,}",
+            f"{item.length_km:.1f} km",
             score_str,
-            item["geojson"],
+            item.geojson,
         )
 
     c.print(table)

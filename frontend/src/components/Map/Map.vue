@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertCircle, AlertTriangle, Layers, Loader2, Scale, ShieldCheck } from '@lucide/vue'
+import { AlertCircle, AlertTriangle, Layers, Scale, ShieldCheck } from '@lucide/vue'
 import type { BikeInfrastructureModel, ColorMode, GeoJsonData, GeoJsonFeature } from '@/types'
 import { colorPalettes, MISSING_DATA_COLOR } from '@/utils/colorScale'
 import {
@@ -26,17 +26,16 @@ interface Props {
   rawGeojsonData?: GeoJsonData | null
   modelConfig: BikeInfrastructureModel
   colorMode?: ColorMode
-  loading?: boolean
   error?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   colorMode: 'safety',
-  loading: false,
   error: null,
 })
 
 const emit = defineEmits<{
+  ready: []
   'update:colorMode': [mode: ColorMode]
 }>()
 
@@ -271,6 +270,7 @@ const setupMapLayers = () => {
   } else if (props.geojsonData) {
     fitToBounds(props.geojsonData)
   }
+  emit('ready')
 }
 
 const setSelectedFeature = (feature: GeoJsonFeature | null) => {
@@ -430,14 +430,6 @@ watch(
     >
       <AlertCircle :size="18" class="mr-2" />
       <span>{{ error }}</span>
-    </div>
-
-    <div
-      class="notification is-info is-light is-flex is-align-items-center map-notification"
-      v-if="loading"
-    >
-      <Loader2 :size="18" class="mr-2 spin-icon" />
-      <span>Loading map data...</span>
     </div>
 
     <div ref="mapContainer" class="map-container"></div>
