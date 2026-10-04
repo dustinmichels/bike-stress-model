@@ -4,10 +4,10 @@
 
 This guide describes how production compression, cache headers, and GeoJSON versioning apply to the frontend. These concerns span three layers:
 
-| Concern | Owner |
-| --- | --- |
-| Generate and sanitize street data | `main.py` |
-| Fingerprint frontend assets | Vite |
+| Concern                                       | Owner                   |
+| --------------------------------------------- | ----------------------- |
+| Generate and sanitize street data             | `main.py`               |
+| Fingerprint frontend assets                   | Vite                    |
 | Compress responses and set HTTP cache headers | Hosting platform or CDN |
 
 Compression and HTTP cache headers do not belong in `main.py`. The data pipeline should produce normal GeoJSON. The server that delivers the built site decides whether to use Brotli or gzip and which `Cache-Control` header to send.
