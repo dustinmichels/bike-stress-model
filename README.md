@@ -27,13 +27,9 @@ uv run main
 
 Outputs are written to `data/out/main/`.
 
-### Copy Data to Frontend
+Geopackage files are more complete, while geojson files are santized to be more lightweight in browser.
 
-Copy generated GeoJSON files into the frontend public data directory (`frontend/public/data`):
-
-```sh
-./copy.sh
-```
+You will be prompted with the option to copy geosjon outputs to `frontend/public/data`.
 
 ### Run Tests
 
@@ -74,7 +70,7 @@ $$\text{Composite Score} = 0.60 \times \text{Separation} + 0.20 \times \text{Spe
 
 ## Frontend Development
 
-See `frontend/README.md` for instructions on running the frontend:
+The frontned is built with bun/ vue/ vite/ TypeScript.
 
 ```sh
 cd frontend
