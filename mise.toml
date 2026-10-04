@@ -5,3 +5,8 @@ bun = "1.4.2"
 [tasks.fmt]
 description = "Format frontend with oxfmt and python with ruff"
 run = ["oxfmt", "ruff format"]
+
+[tasks.clear-notebooks]
+description = "Clear Jupyter notebook outputs"
+alias = "clear_notebooks"
+run = "uv run --with jupyter jupyter nbconvert --clear-output --inplace notebooks/*.ipynb"
