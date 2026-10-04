@@ -1,8 +1,9 @@
 # Bike Stress Model
 
-This is a bike route stress model and interactive map for evaluating cycling infrastructure safety and comfort using OpenStreetMap data.
+This is a bike route stress model and interactive map for evaluating cycling infrastructure safety and comfort using OpenStreetMap data. The project was originally produced for my Advanced GIS course at Tufts University, in the Fall of 2026, where [it won "best in show" at the Tufts GIS Expo](https://sites.tufts.edu/gis/gis-in-action/tufts-gis-poster-expo/).
 
-It was originally produced for my Advanced GIS course at Tufts University, in the Fall of 2026, where [it won "best in show" at the Tufts GIS Expo](https://sites.tufts.edu/gis/gis-in-action/tufts-gis-poster-expo/).
+> [!NOTE]
+> The version of code associated with that submission is tagged [here](https://github.com/dustinmichels/bike-stress-model/tree/adv-gis).
 
 The project consists of:
 
