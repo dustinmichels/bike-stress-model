@@ -1,7 +1,7 @@
 import collections
-import json
 import os
 import re
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -191,7 +191,12 @@ def sanitize_for_frontend(
         cleaned: list = []
         for x in series:
             if isinstance(x, (list, np.ndarray)):
-                val = x[0] if len(x) > 0 else None
+                if col == "name" and len(x) > 1:
+                    val = " / ".join(str(s) for s in x if s)
+                elif len(x) > 0:
+                    val = x[0]
+                else:
+                    val = None
             elif pd.isna(x):
                 val = None
             else:
@@ -252,8 +257,10 @@ def sanitize_for_frontend(
         parent_dir = os.path.dirname(out_path)
         if parent_dir:
             os.makedirs(parent_dir, exist_ok=True)
-        data = json.loads(sanitized.to_json(drop_id=True, show_bbox=False))
+        geojson_str = sanitized.to_json(
+            drop_id=True, show_bbox=False, separators=(",", ":")
+        )
         with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, separators=(",", ":"))
+            f.write(geojson_str)
 
     return sanitized

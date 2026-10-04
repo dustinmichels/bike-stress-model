@@ -169,6 +169,7 @@ class TestSanitizeForFrontend:
         assert pd.isna(sanitized["name"].iloc[2])
         assert pd.isna(sanitized["maxspeed_int"].iloc[1])
         import json
+
         serialized = json.loads(sanitized.to_json())
         assert serialized["features"][2]["properties"]["name"] is None
         assert serialized["features"][1]["properties"]["maxspeed_int"] is None
