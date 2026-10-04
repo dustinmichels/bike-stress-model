@@ -24,7 +24,6 @@ const getFieldIcon = (field: string | null) => {
   return Settings
 }
 
-
 // Computed property to get the parameter data directly from props
 const parameterData = computed(() => {
   if (!props.dataField) return null
@@ -117,14 +116,25 @@ onUnmounted(() => {
         </header>
         <section class="modal-card-body">
           <div v-if="parameterData">
-            <p class="mb-4">{{ parameterData.notes }}</p>
+            <p v-if="parameterData.notes" class="mb-4">{{ parameterData.notes }}</p>
 
-            <div class="is-flex is-justify-content-flex-end mb-3">
+            <div class="modal-actions mb-3">
+              <a
+                v-if="parameterData.link"
+                :href="parameterData.link"
+                target="_blank"
+                class="button is-primary is-small"
+              >
+                <span class="icon is-small">
+                  <ExternalLink :size="14" />
+                </span>
+                <span>Learn More on OpenStreetMap Wiki</span>
+              </a>
               <button class="button is-small reset-button" @click="resetScores">
                 <span class="icon is-small">
                   <RotateCcw :size="14" />
                 </span>
-                <span>Reset All</span>
+                <span>Reset Defaults</span>
               </button>
             </div>
 
@@ -157,18 +167,6 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
-
-            <a
-              v-if="parameterData.link"
-              :href="parameterData.link"
-              target="_blank"
-              class="button is-link is-small mt-4 learn-more-button"
-            >
-              <span class="icon is-small">
-                <ExternalLink :size="14" />
-              </span>
-              <span>Learn More on OpenStreetMap Wiki</span>
-            </a>
           </div>
         </section>
       </div>
@@ -198,14 +196,24 @@ onUnmounted(() => {
   background-color: white;
 }
 
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .reset-button {
   background-color: #3273dc;
   color: white;
-  border: none;
+  border: 1px solid #3273dc;
+  margin-left: auto;
 }
 
 .reset-button:hover {
   background-color: #2366d1;
+  border-color: #2366d1;
   color: white;
 }
 
@@ -320,16 +328,6 @@ onUnmounted(() => {
   font-size: 1rem;
   min-width: 2.5rem;
   text-align: right;
-}
-
-.learn-more-button {
-  background-color: #3273dc;
-  border-color: #3273dc;
-}
-
-.learn-more-button:hover {
-  background-color: #2366d1;
-  border-color: #2366d1;
 }
 
 /* Ensure modal appears above map */

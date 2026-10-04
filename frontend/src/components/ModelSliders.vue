@@ -396,7 +396,7 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 3px;
-  padding: 0.2rem;
+  padding: 0.2rem 0.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -528,7 +528,7 @@ onUnmounted(() => {
   }
 
   .icon-button {
-    padding: 0.15rem;
+    padding: 0.15rem 0.4rem;
   }
 
   .model-component {

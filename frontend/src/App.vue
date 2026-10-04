@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ColorMode } from '@/types'
 import { useBikeModel } from '@/composables/useBikeModel'
 import { useCitySelection } from '@/composables/useCitySelection'
 import { defineAsyncComponent, shallowRef } from 'vue'
@@ -18,7 +19,7 @@ const { cities, currCity } = useCitySelection()
 
 // UI display state
 const settingsDataField = shallowRef<string | null>(null)
-const useGoodColors = shallowRef(true)
+const colorMode = shallowRef<ColorMode>('safety')
 const isExportModalOpen = shallowRef(false)
 
 // Bike model configuration, weights, and scored GeoJSON dataset
@@ -32,7 +33,7 @@ const {
   handleUpdateScore,
 } = useBikeModel({
   city: currCity,
-  useGoodColors,
+  colorMode,
 })
 
 const handleOpenSettings = (dataField: string) => {
@@ -48,10 +49,10 @@ const handleOpenSettings = (dataField: string) => {
           :geojson-data="enrichedGeoJson"
           :raw-geojson-data="geojsonData"
           :model-config="modelConfig"
-          :use-good-colors="useGoodColors"
+          :color-mode="colorMode"
           :loading="loading"
           :error="error"
-          @toggle-colors="useGoodColors = !useGoodColors"
+          @update:color-mode="colorMode = $event"
         />
       </div>
       <div class="column is-one-third-tablet is-full-mobile right-column">

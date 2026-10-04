@@ -1,6 +1,6 @@
 import os
 
-from main import copy_to_frontend
+from main import copy_to_frontend, save_data_for_place
 
 
 def test_copy_to_frontend(tmp_path):
@@ -29,3 +29,38 @@ def test_copy_to_frontend(tmp_path):
     assert os.path.exists(dest_dir / "somerville_streets.geojson")
     # Boundary file should not be copied
     assert not os.path.exists(dest_dir / "somerville_boundary.geojson")
+
+
+def test_save_data_for_place(tmp_path):
+    import geopandas as gpd
+    import shapely.geometry as sg
+
+    out_dir = str(tmp_path / "out")
+    nodes = gpd.GeoDataFrame({"geometry": [sg.Point(0, 0)]}, crs="EPSG:4326")
+    edges = gpd.GeoDataFrame(
+        {
+            "name": ["Test Road"],
+            "separation_level": ["lane"],
+            "street_classification": ["residential"],
+            "maxspeed_int": [25.0],
+            "composite_score": ["2.0"],
+            "geometry": [sg.LineString([(0, 0), (1, 1)])],
+        },
+        crs="EPSG:4326",
+    )
+
+    save_data_for_place("Somerville, Massachusetts, USA", out_dir, nodes, edges)
+
+    csv_path = os.path.join(out_dir, "somerville_streets.csv")
+    gpkg_path = os.path.join(out_dir, "somerville_streets.gpkg")
+    geojson_path = os.path.join(out_dir, "somerville_streets.geojson")
+
+    assert os.path.exists(csv_path)
+    assert os.path.exists(gpkg_path)
+    assert os.path.exists(geojson_path)
+
+    # Verify GeoJSON was sanitized (composite_score pruned)
+    saved_geojson = gpd.read_file(geojson_path)
+    assert "composite_score" not in saved_geojson.columns
+    assert "name" in saved_geojson.columns
+    assert saved_geojson["name"].iloc[0] == "Test Road"

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { AlertCircle, AlertTriangle, Layers, Loader2, ShieldCheck } from '@lucide/vue'
-import type { BikeInfrastructureModel, GeoJsonData, GeoJsonFeature } from '@/types'
-import { badColors, goodColors, MISSING_DATA_COLOR } from '@/utils/colorScale'
+import { AlertCircle, AlertTriangle, Layers, Loader2, Scale, ShieldCheck } from '@lucide/vue'
+import type { BikeInfrastructureModel, ColorMode, GeoJsonData, GeoJsonFeature } from '@/types'
+import { colorPalettes, MISSING_DATA_COLOR } from '@/utils/colorScale'
 import {
+  AttributionControl,
   LngLatBounds,
   Map as MapLibreMap,
   NavigationControl,
@@ -24,19 +25,19 @@ interface Props {
   geojsonData: GeoJsonData | null
   rawGeojsonData?: GeoJsonData | null
   modelConfig: BikeInfrastructureModel
-  useGoodColors?: boolean
+  colorMode?: ColorMode
   loading?: boolean
   error?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  useGoodColors: true,
+  colorMode: 'safety',
   loading: false,
   error: null,
 })
 
 const emit = defineEmits<{
-  toggleColors: []
+  'update:colorMode': [mode: ColorMode]
 }>()
 
 const mapContainer = useTemplateRef<HTMLElement>('mapContainer')
@@ -47,11 +48,7 @@ let currentPopup: Popup | null = null
 let selectedFeature: GeoJsonFeature | null = null
 const isMapLoaded = shallowRef(false)
 
-/* ------------------------------------------------------------
-  COLOR SCALE
------------------------------------------------------------- */
-const legendColors = computed(() => (props.useGoodColors ? goodColors : badColors))
-
+const legendColors = computed(() => colorPalettes[props.colorMode])
 /* ------------------------------------------------------------
   BOUNDS CALCULATION
 ------------------------------------------------------------ */
@@ -245,7 +242,7 @@ const setupMapLayers = () => {
     selectedFeature = feature
     setSelectedFeature(feature)
 
-    const popupContent = createFeaturePopup(feature, legendColors.value)
+    const popupContent = createFeaturePopup(feature)
     if (popupContent) {
       if (currentPopup) {
         const oldPopup = currentPopup
@@ -332,17 +329,33 @@ const handleKeyDown = (e: KeyboardEvent) => {
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
   if (!mapContainer.value) return
+  class CollapsedAttributionControl extends AttributionControl {
+    override onAdd(m: MapLibreMap): HTMLElement {
+      const el = super.onAdd(m)
+      el.classList.remove('maplibregl-compact-show')
+      el.removeAttribute('open')
+      return el
+    }
+  }
 
   map = new MapLibreMap({
     container: mapContainer.value,
     style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
     center: [-71.0995, 42.3876],
     zoom: 14,
+    attributionControl: false,
   })
   window._map = map
   map.on('error', (e) => console.error('MapLibre error:', e))
 
   map.addControl(new NavigationControl({ showCompass: true }), 'top-left')
+  map.addControl(
+    new CollapsedAttributionControl({
+      compact: true,
+      customAttribution: '<a href="https://maplibre.org/" target="_blank">MapLibre</a>',
+    }),
+    'bottom-right',
+  )
 
   map.on('styledata', setupMapLayers)
   map.on('load', setupMapLayers)
@@ -385,7 +398,7 @@ watch(
       const updatedFeature = typeof id === 'number' ? newData.features[id] : null
       if (updatedFeature) {
         selectedFeature = updatedFeature
-        const updatedContent = createFeaturePopup(updatedFeature, legendColors.value)
+        const updatedContent = createFeaturePopup(updatedFeature)
         if (updatedContent) {
           currentPopup.setHTML(updatedContent)
         }
@@ -411,12 +424,18 @@ watch(
 
 <template>
   <div class="box map-component">
-    <div class="notification is-danger is-light is-flex is-align-items-center" v-if="error">
+    <div
+      class="notification is-danger is-light is-flex is-align-items-center map-notification"
+      v-if="error"
+    >
       <AlertCircle :size="18" class="mr-2" />
       <span>{{ error }}</span>
     </div>
 
-    <div class="notification is-info is-light is-flex is-align-items-center" v-if="loading">
+    <div
+      class="notification is-info is-light is-flex is-align-items-center map-notification"
+      v-if="loading"
+    >
       <Loader2 :size="18" class="mr-2 spin-icon" />
       <span>Loading map data...</span>
     </div>
@@ -442,6 +461,10 @@ watch(
       <div class="legend-labels">
         <span v-for="n in legendColors.length" :key="n - 1">{{ n - 1 }}</span>
       </div>
+      <div class="legend-sublabels">
+        <span>Safer</span>
+        <span>Riskier</span>
+      </div>
 
       <!-- Missing data indicator -->
       <div class="legend-missing">
@@ -452,25 +475,38 @@ watch(
 
     <!-- Color Scale Toggle -->
     <div class="color-toggle">
-      <div class="toggle-container">
-        <span
-          class="toggle-label is-inline-flex is-align-items-center"
-          :class="{ active: useGoodColors }"
+      <div class="color-toggle-label">color scheme</div>
+      <div class="segmented-control" role="group" aria-label="color scheme">
+        <button
+          type="button"
+          class="segment-button mode-safety"
+          :class="{ active: colorMode === 'safety' }"
+          @click="emit('update:colorMode', 'safety')"
+          title="Safety (Green to White)"
         >
           <ShieldCheck :size="14" class="mr-1" />
           <span>Safety</span>
-        </span>
-        <label class="switch">
-          <input type="checkbox" :checked="!useGoodColors" @change="emit('toggleColors')" />
-          <span class="slider"></span>
-        </label>
-        <span
-          class="toggle-label is-inline-flex is-align-items-center"
-          :class="{ active: !useGoodColors }"
+        </button>
+        <button
+          type="button"
+          class="segment-button mode-safety-risk"
+          :class="{ active: colorMode === 'safety-risk' }"
+          @click="emit('update:colorMode', 'safety-risk')"
+          title="Safety-Risk (Green to Red)"
+        >
+          <Scale :size="14" class="mr-1" />
+          <span>Safety-Risk</span>
+        </button>
+        <button
+          type="button"
+          class="segment-button mode-risk"
+          :class="{ active: colorMode === 'risk' }"
+          @click="emit('update:colorMode', 'risk')"
+          title="Risk (White to Red)"
         >
           <AlertTriangle :size="14" class="mr-1" />
           <span>Risk</span>
-        </span>
+        </button>
       </div>
     </div>
   </div>
@@ -483,20 +519,34 @@ watch(
   display: flex;
   flex-direction: column;
   position: relative;
+  padding: 0.5rem;
+  --bulma-box-padding: 0.5rem;
+}
+
+.map-notification {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  margin: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .map-container {
   flex: 1;
   min-height: 400px;
-  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
   overflow: hidden;
 }
 
 /* Legend */
 .legend {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
+  bottom: 18px;
+  left: 18px;
   background: white;
   padding: 10px 15px;
   border-radius: 4px;
@@ -535,6 +585,15 @@ watch(
   text-align: center;
 }
 
+.legend-sublabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-style: italic;
+  color: #666;
+  margin-top: 2px;
+}
+
 .legend-missing {
   display: flex;
   align-items: center;
@@ -560,13 +619,13 @@ watch(
 /* Color toggle */
 .color-toggle {
   position: absolute;
-  top: 32px;
-  right: 32px;
+  top: 18px;
+  right: 18px;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  padding: 10px 15px;
-  border-radius: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   z-index: 1000;
   transition:
@@ -574,81 +633,81 @@ watch(
     box-shadow 0.2s ease;
 }
 
+.color-toggle-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  margin-bottom: 4px;
+  padding-left: 2px;
+}
+
 .color-toggle:hover {
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-.toggle-container {
+.segmented-control {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px;
+  border-radius: 6px;
 }
 
-.toggle-label {
-  font-size: 13px;
+.segment-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 12px;
   font-weight: 500;
-  color: #999;
-  transition: color 0.3s ease;
-}
-
-.toggle-label.active {
-  color: #333;
-  font-weight: 600;
-}
-
-/* iOS-style toggle switch */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 48px;
-  height: 24px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
+  padding: 5px 10px;
+  border-radius: 4px;
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #48c774;
-  transition: 0.3s;
-  border-radius: 24px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
 }
 
-.slider:before {
-  position: absolute;
-  content: '';
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: 0.3s;
-  border-radius: 50%;
+.segment-button:hover:not(.active) {
+  color: #222;
+  background: rgba(255, 255, 255, 0.6);
 }
 
-input:checked + .slider {
-  background-color: #f14668;
+.segment-button.active {
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-input:checked + .slider:before {
-  transform: translateX(24px);
+.segment-button.mode-safety.active {
+  background-color: #2ca25f; /* Green for Safety */
 }
 
-input:focus + .slider {
-  box-shadow: 0 0 1px #48c774;
+.segment-button.mode-safety-risk.active {
+  background-color: #d97706; /* Amber for Safety-Risk */
 }
 
-input:checked:focus + .slider {
-  box-shadow: 0 0 1px #f14668;
+.segment-button.mode-risk.active {
+  background-color: #b30000; /* Red for Risk */
+}
+
+@media (max-width: 600px) {
+  .color-toggle {
+    top: 14px;
+    right: 14px;
+    padding: 3px;
+  }
+
+  .segment-button {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
 }
 
 /* MapLibre popup styles */

@@ -24,12 +24,53 @@ export function useCitySelection(options: UseCitySelectionOptions = {}) {
     return cities.find((c) => c.toLowerCase() === cleaned) ?? null
   }
 
+  const formatCityParam = (city: string): string => `${city.toLowerCase()},ma`
+
+  const isCanonicalUrl = (city: string): boolean => {
+    if (typeof window === 'undefined') return true
+    const raw = new URLSearchParams(window.location.search).get('city')
+    return raw === formatCityParam(city)
+  }
+
+  const syncUrl = (city: string, mode: 'push' | 'replace' = 'push') => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    params.set('city', formatCityParam(city))
+    const queryString = `?${params.toString().replace(/%2C/gi, ',')}`
+    const targetUrl = `${window.location.pathname}${queryString}${window.location.hash}`
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    if (currentUrl === targetUrl) return
+
+    if (mode === 'replace') {
+      window.history.replaceState({ city }, '', targetUrl)
+    } else {
+      window.history.pushState({ city }, '', targetUrl)
+    }
+  }
+
   const currCity = shallowRef<string>(parseCityFromUrl() ?? defaultCity)
 
+  // Redirect on load if base URL (no city param), invalid city param, or non-canonical format
+  if (typeof window !== 'undefined') {
+    if (parseCityFromUrl() === null || !isCanonicalUrl(currCity.value)) {
+      syncUrl(currCity.value, 'replace')
+    }
+  }
+
   const onPopState = () => {
-    const cityFromUrl = parseCityFromUrl() ?? defaultCity
-    if (cityFromUrl !== currCity.value) {
-      currCity.value = cityFromUrl
+    const cityFromUrl = parseCityFromUrl()
+    if (cityFromUrl) {
+      if (cityFromUrl !== currCity.value) {
+        currCity.value = cityFromUrl
+      }
+      if (!isCanonicalUrl(cityFromUrl)) {
+        syncUrl(cityFromUrl, 'replace')
+      }
+    } else {
+      if (currCity.value !== defaultCity) {
+        currCity.value = defaultCity
+      }
+      syncUrl(defaultCity, 'replace')
     }
   }
 
@@ -44,14 +85,7 @@ export function useCitySelection(options: UseCitySelectionOptions = {}) {
   watch(currCity, (newCity) => {
     if (typeof window === 'undefined') return
     if (parseCityFromUrl() !== newCity) {
-      const params = new URLSearchParams(window.location.search)
-      params.set('city', `${newCity.toLowerCase()},ma`)
-      const queryString = `?${params.toString().replace(/%2C/gi, ',')}`
-      window.history.pushState(
-        { city: newCity },
-        '',
-        `${window.location.pathname}${queryString}${window.location.hash}`,
-      )
+      syncUrl(newCity, 'push')
     }
   })
 

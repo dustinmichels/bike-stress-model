@@ -1,6 +1,6 @@
 # Bike Stress Model
 
-A bike stress model and interactive map evaluating cycling infrastructure safety and comfort using OpenStreetMap data.
+A bike stress model and interactive map evaluating cycling infrastructure safety and comfort using OpenStreetMap data. The idea is the evaluate the bike network with children in mind.
 
 The project consists of:
 
@@ -29,7 +29,7 @@ Outputs are written to `data/out/main/`.
 
 ### Copy Data to Frontend
 
-Copy generated GeoJSON files into the frontend public directory:
+Copy generated GeoJSON files into the frontend public data directory (`frontend/public/data`):
 
 ```sh
 ./copy.sh

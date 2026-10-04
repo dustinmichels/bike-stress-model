@@ -2,6 +2,7 @@ import glob
 import os
 import shutil
 
+import networkx as nx
 import osmnx as ox
 import pandas as pd
 from rich import box
@@ -11,7 +12,7 @@ from rich.prompt import Confirm
 from rich.table import Table
 
 import src.stressmodel as sm
-from util import extract_width
+from util import extract_width, sanitize_for_frontend
 
 console = Console()
 
@@ -59,6 +60,10 @@ OUTPUT_COLUMNS = [
     "street_0",
     "street_classification",
     "street_classification_score",
+    # --- lanes ---
+    "lanes_0",
+    "lanes_int",
+    "lanes_int_score",
     # --- composite ---
     "composite_score",
     # --- basics ---
@@ -77,6 +82,7 @@ def get_network(place: str, network_type: str = "bike"):
 
     # consolidate intersections within 10 meters
     G = ox.consolidate_intersections(G, tolerance=10)
+    assert isinstance(G, nx.MultiDiGraph)
 
     # project back to WGS84
     G = ox.project_graph(G, to_crs="EPSG:4326")
@@ -153,8 +159,9 @@ def prepare_data_for_place(place: str, console: Console | None = None):
         edges["composite_score"] = compute_composite_score(edges)
 
     mean_score = float(edges["composite_score"].mean())
+    median_score = float(edges["composite_score"].median())
     c.print(
-        f"  [green]✓[/green] Stress models evaluated (mean score: [bold]{mean_score:.2f}[/bold] / 4.00)"
+        f"  [green]✓[/green] Stress models evaluated (mean | median: [bold]{mean_score:.2f} | {median_score:.2f}[/bold] / 4.00)"
     )
 
     return nodes, edges
@@ -185,6 +192,7 @@ def save_data_for_place(
     c = console or globals().get("console", Console())
     place_first_word = place.split(",")[0].strip().replace(" ", "_").lower()
     city_out = f"{out_path}/{place_first_word}"
+    os.makedirs(out_path, exist_ok=True)
 
     # save to csv
     edges.to_csv(f"{city_out}_streets.csv", index=True)
@@ -193,8 +201,9 @@ def save_data_for_place(
     edges.to_file(f"{city_out}_streets.gpkg", layer="streets", driver="GPKG")
     nodes.to_file(f"{city_out}_streets.gpkg", layer="nodes", driver="GPKG")
 
-    # also save geojson
-    edges.to_file(f"{city_out}_streets.geojson", driver="GeoJSON")
+    # also save geojson (sanitized and compacted for frontend performance)
+    geojson_out = f"{city_out}_streets.geojson"
+    sanitize_for_frontend(edges, out_path=geojson_out)
 
     c.print(
         f"  [green]✓[/green] Exported [bold]{place_first_word}[/bold] (CSV, GPKG, GeoJSON)"
@@ -204,11 +213,11 @@ def save_data_for_place(
 def copy_to_frontend(
     places: list[str] = PLACES,
     out_path: str = OUT_PATH,
-    dest_dir: str = "frontend/public",
+    dest_dir: str = "frontend/public/data",
     chart_dest_dir: str = "deployed-charts",
     console: Console | None = None,
 ) -> list[str]:
-    """Copy generated *_streets.geojson files to frontend/public, and any charts to deployed-charts."""
+    """Copy generated *_streets.geojson files to frontend/public/data, and any charts to deployed-charts."""
     c = console or globals().get("console", Console())
     os.makedirs(dest_dir, exist_ok=True)
     copied_files: list[str] = []
@@ -297,6 +306,7 @@ def main():
         )
 
         mean_score = float(edges["composite_score"].mean())
+        median_score = float(edges["composite_score"].median())
         total_km = float(edges["length"].sum() / 1000)
         geojson_filename = f"{place_first_word}_streets.geojson"
 
@@ -306,7 +316,8 @@ def main():
                 "nodes": len(nodes),
                 "edges": len(edges),
                 "length_km": total_km,
-                "score": mean_score,
+                "mean_score": mean_score,
+                "median_score": median_score,
                 "geojson": geojson_filename,
             }
         )
@@ -322,18 +333,19 @@ def main():
     table.add_column("Nodes", justify="right")
     table.add_column("Segments", justify="right")
     table.add_column("Length", justify="right")
-    table.add_column("Avg Stress", justify="right")
+    table.add_column("Stress (Mean | Median)", justify="right")
     table.add_column("GeoJSON File", style="dim")
 
-    for item in summary_data:
-        score = item["score"]
+    def _format_score(score: float) -> str:
         if score < 1.5:
-            score_str = f"[green]{score:.2f}[/green]"
+            return f"[green]{score:.2f}[/green]"
         elif score < 2.5:
-            score_str = f"[yellow]{score:.2f}[/yellow]"
+            return f"[yellow]{score:.2f}[/yellow]"
         else:
-            score_str = f"[red]{score:.2f}[/red]"
+            return f"[red]{score:.2f}[/red]"
 
+    for item in summary_data:
+        score_str = f"{_format_score(item['mean_score'])} | {_format_score(item['median_score'])}"
         table.add_row(
             item["city"],
             f"{item['nodes']:,}",

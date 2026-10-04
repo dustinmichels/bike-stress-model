@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { FileCode, FileDown, FileImage, Workflow } from '@lucide/vue'
+import { Check, FileCode, FileImage, Link, Share2, Workflow } from '@lucide/vue'
 import type { BikeInfrastructureModel, GeoJsonData } from '@/types'
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, shallowRef } from 'vue'
 import ModelFlowChart from './ModelFlowChart.vue'
 
 const props = defineProps<{
@@ -14,8 +14,44 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const isCopied = shallowRef(false)
+let copyTimeout: ReturnType<typeof setTimeout> | null = null
+
 const close = () => {
+  isCopied.value = false
+  if (copyTimeout) {
+    clearTimeout(copyTimeout)
+    copyTimeout = null
+  }
   emit('close')
+}
+
+const copyLink = async () => {
+  try {
+    const url = window.location.href
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = url
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      document.execCommand('copy')
+      textArea.remove()
+    }
+    isCopied.value = true
+    if (copyTimeout) clearTimeout(copyTimeout)
+    copyTimeout = setTimeout(() => {
+      isCopied.value = false
+    }, 2000)
+  } catch (error) {
+    console.error('Error copying link:', error)
+    alert('Failed to copy link')
+  }
 }
 
 const exportDiagram = () => {
@@ -130,6 +166,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (copyTimeout) clearTimeout(copyTimeout)
   document.removeEventListener('keydown', handleEscape)
 })
 </script>
@@ -141,8 +178,8 @@ onUnmounted(() => {
       <div class="modal-card large-modal">
         <header class="modal-card-head">
           <p class="modal-card-title is-flex is-align-items-center">
-            <FileDown :size="20" class="mr-2" />
-            <span>Export Map</span>
+            <Share2 :size="20" class="mr-2" />
+            <span>Share / Export</span>
           </p>
           <button class="delete" aria-label="close" @click="close"></button>
         </header>
@@ -158,17 +195,23 @@ onUnmounted(() => {
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button class="button is-success" @click="exportGeojson">
+          <button class="button" :class="isCopied ? 'is-success' : 'is-info'" @click="copyLink">
             <span class="icon">
-              <FileCode :size="16" />
+              <component :is="isCopied ? Check : Link" :size="16" />
             </span>
-            <span>Download GeoJSON</span>
+            <span>{{ isCopied ? 'Link Copied!' : 'Copy Link' }}</span>
           </button>
           <button class="button is-primary" @click="exportDiagram">
             <span class="icon">
               <FileImage :size="16" />
             </span>
-            <span>Save Diagram as PNG</span>
+            <span>Download Diagram (png)</span>
+          </button>
+          <button class="button is-success" @click="exportGeojson">
+            <span class="icon">
+              <FileCode :size="16" />
+            </span>
+            <span>Download Data (geojson)</span>
           </button>
         </footer>
       </div>
@@ -192,6 +235,7 @@ onUnmounted(() => {
 }
 
 .modal-card-foot {
-  gap: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 </style>

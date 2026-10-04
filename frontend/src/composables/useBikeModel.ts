@@ -1,6 +1,6 @@
 import { BIKE_INFRASTRUCTURE_MODEL } from '@/data/bikeData'
-import type { BikeInfrastructureModel, GeoJsonData, ModelWeights } from '@/types'
-import { badColors, goodColors, scoreToColor } from '@/utils/colorScale'
+import type { BikeInfrastructureModel, ColorMode, GeoJsonData, ModelWeights } from '@/types'
+import { colorPalettes, scoreToColor } from '@/utils/colorScale'
 import { calculateAllScores } from '@/utils/scoreCalculator'
 import {
   computed,
@@ -23,7 +23,7 @@ export const CITY_FILE_MAP: Record<string, string> = {
 
 export interface UseBikeModelOptions {
   city: MaybeRefOrGetter<string>
-  useGoodColors?: MaybeRefOrGetter<boolean>
+  colorMode?: MaybeRefOrGetter<ColorMode>
 }
 
 export interface UseBikeModelReturn {
@@ -77,7 +77,7 @@ export function useBikeModel(options: UseBikeModelOptions): UseBikeModelReturn {
     error.value = null
 
     try {
-      const response = await fetch(import.meta.env.BASE_URL + fileName, {
+      const response = await fetch(`${import.meta.env.BASE_URL}data/${fileName}`, {
         signal: controller.signal,
       })
       if (!response.ok) {
@@ -109,8 +109,8 @@ export function useBikeModel(options: UseBikeModelOptions): UseBikeModelReturn {
     const raw = geojsonData.value
     if (!raw) return null
 
-    const isGoodColors = options.useGoodColors ? toValue(options.useGoodColors) : true
-    const palette = isGoodColors ? goodColors : badColors
+    const mode = options.colorMode ? toValue(options.colorMode) : 'safety'
+    const palette = colorPalettes[mode]
     const config = modelConfig.value
     const weights = modelWeights.value
 

@@ -1,5 +1,6 @@
 // Type definitions for the bike infrastructure scoring system
 
+export type ColorMode = 'safety' | 'safety-risk' | 'risk'
 export interface CategoryData {
   score: number
   displayLabel: string
